@@ -522,6 +522,7 @@
                 this.updateHPUI();
                 this.renderHand();
                 this.clearSlots();
+                this.renderGraph();
             }
 
             generateLevelData(difficulty) {
@@ -782,33 +783,65 @@
                 ctx.clearRect(0, 0, w, h);
 
                 // Camera Logic
-                const scaleX = (w / 10) * this.pan.zoom; 
-                const scaleY = (h / (this.maxHP > 100 ? 500 : 50)) * this.pan.zoom; 
-                const originX = 50 + this.pan.x;
-                const originY = h - 50 + this.pan.y;
+                const scaleX = (w / 20) * this.pan.zoom; 
+                const scaleY = scaleX; // Uniform scaling for simplicity
+                const originX = w / 2 + this.pan.x;
+                const originY = h / 2 + this.pan.y;
 
                 // Draw Grid
                 ctx.strokeStyle = "#1e293b";
                 ctx.lineWidth = 1;
+
+                function calculateStep(graphZoom, baseStep = 1, sensitivity) {
+                    if (baseStep / graphZoom <= 1) return 1 
+                    let unroundedStep = Math.max(1, Math.floor((1.5 * baseStep) / graphZoom));
+                    return roundToNiceNumber(unroundedStep);
+                }
+
+                function roundToNiceNumber(value) {
+                    // Get the magnitude (power of 10) of the number
+                    const magnitude = Math.floor(Math.log10(value));
+                    const powerOf10 = Math.pow(10, magnitude);
+                    // Normalize the value to a number between 1 and 10
+                    const normalizedValue = value / powerOf10;
+                    // Determine the nice fractional value (1, 2, or 5)
+                    let niceFractional;
+                    if (normalizedValue >= 5) {
+                        niceFractional = 5;
+                    } else if (normalizedValue >= 2) {
+                        niceFractional = 2;
+                    } else {
+                        niceFractional = 1;
+                    }
+                    return niceFractional * powerOf10;
+                }
                 
-                // Vertical Lines
-                for(let i=0; i<20; i++) {
-                    const x = originX + i * scaleX;
+                // Vertical Lines (X-axis)
+                const xStep =  calculateStep(this.pan.zoom, 1);
+                const numLinesX = Math.ceil((w / (scaleX * xStep)) / 2) * 2 + 1;
+                const startX =  Math.ceil(0-numLinesX - this.pan.x / (scaleX * xStep));
+                const endX = Math.floor(numLinesX - this.pan.x / (scaleX * xStep));
+                for(let i=startX; i<endX; i++) {
+                    const val = i * xStep;
+                    const x = originX + val * scaleX;
                     if(x < 0 || x > w) continue;
                     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-                    ctx.fillStyle = "#64748b"; ctx.font = "12px monospace"; ctx.fillText(i, x - 4, originY + 20);
+                    if (i === 0) continue;
+                    ctx.fillStyle = "#64748b"; ctx.font = "12px monospace"; ctx.fillText(val, x - 4, originY + 20);
                 }
                 
                 // Horizontal Lines (Y-Axis)
-                const yStep = 10 * Math.ceil(5/this.pan.zoom); // Dynamic stepping
-                for(let i=0; i<20; i++) {
+                const yStep = calculateStep(this.pan.zoom, 1);
+                const numLinesY = Math.ceil((h / (scaleY * yStep)) / 2) * 2 + 1;
+                const startY =  Math.ceil(0-numLinesY + this.pan.y / (scaleY * yStep));
+                const endY = Math.floor(numLinesY + this.pan.y / (scaleY * yStep));
+                for(let i=startY; i<endY; i++) {
                     const val = i * yStep;
                     const y = originY - val * scaleY;
                     if(y < 0 || y > h) continue;
                     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-                    if(i > 0) {
-                        ctx.fillStyle = "#64748b"; ctx.font = "12px monospace"; ctx.fillText(val, originX - 30, y + 4);
-                    }
+                    if(i === 0) continue;
+                    ctx.fillStyle = "#64748b"; ctx.font = "12px monospace"; ctx.fillText(val, originX - (8 + 6 * val.toString().length), y + 4);
                 }
 
                 // Draw Axes
@@ -886,7 +919,7 @@
 
             drawLoop() {
                 if(!this.isDraggingGraph) { // Only auto-render if not dragging to save perf
-                    // this.renderGraph(); 
+                    this.renderGraph(); 
                 }
                 requestAnimationFrame(() => this.drawLoop());
             }
