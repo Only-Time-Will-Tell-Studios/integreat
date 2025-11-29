@@ -5,22 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Integreat! - Calculus Roguelike</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
         
         body {
             font-family: 'JetBrains Mono', monospace;
-            background-color: #0f172a;
+            background-color: #020617; /* Slate 950 */
             color: #e2e8f0;
             overflow: hidden;
             user-select: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Scaler Container */
+        #app-scaler {
+            width: 1280px;
+            height: 800px;
+            position: relative;
+            transform-origin: center center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            background-color: #0f172a; /* Slate 900 background for the app area */
+            overflow: hidden;
         }
 
         /* Card Animations */
         .card {
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
         }
-        .card:hover {
+        .card:not(.disabled):hover {
             transform: translateY(-10px) scale(1.05);
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
             z-index: 10;
@@ -45,6 +65,7 @@
             position: absolute;
             pointer-events: none;
             animation: rise 1s ease-out forwards;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         @keyframes rise {
             0% { transform: translateY(0) scale(1); opacity: 1; }
@@ -72,186 +93,265 @@
             bottom: 0;
             right: 0;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 2;
+            z-index: 50;
             background-size: 100% 2px, 3px 100%;
             pointer-events: none;
         }
 
         .integral-symbol {
-            font-size: 4rem;
+            font-size: 8rem;
             line-height: 1;
-            font-weight: 300;
+            font-weight: 200;
+            font-style: italic;
+        }
+
+        /* Custom Scrollbar for Hand */
+        ::-webkit-scrollbar {
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-center crt relative">
+<body>
 
-    <!-- Game Container -->
-    <div id="game-container" class="w-full max-w-5xl h-full max-h-[900px] flex flex-col p-4 relative z-10">
+    <div id="app-scaler" class="crt flex flex-col">
         
         <!-- Header / HUD -->
-        <div class="flex justify-between items-start mb-4 bg-slate-900/80 p-4 rounded-xl border border-slate-700 shadow-lg">
+        <div class="h-20 flex justify-between items-center bg-slate-900/80 px-6 border-b border-slate-700 relative z-20">
             <div>
-                <h1 class="text-2xl font-bold text-sky-400 tracking-tighter">INTEGREAT!</h1>
+                <h1 class="text-3xl font-bold text-sky-400 tracking-tighter drop-shadow-lg">INTEGREAT!</h1>
                 <div class="text-xs text-slate-400">The Calculus Roguelike</div>
             </div>
-            <div class="flex gap-6 text-sm">
+            
+            <div class="flex gap-8 text-sm items-center">
                 <div class="text-center">
-                    <div class="text-slate-400">LEVEL</div>
-                    <div id="level-display" class="text-xl font-bold text-white">1</div>
+                    <div class="text-slate-400 text-xs tracking-widest uppercase">Level</div>
+                    <div id="level-display" class="text-2xl font-bold text-white">1</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-slate-400">SCORE</div>
-                    <div id="score-display" class="text-xl font-bold text-emerald-400">0</div>
+                    <div class="text-slate-400 text-xs tracking-widest uppercase">Score</div>
+                    <div id="score-display" class="text-2xl font-bold text-emerald-400">0</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-slate-400">TARGET</div>
-                    <div id="target-display" class="text-xl font-bold text-rose-400">50</div>
+                    <div class="text-slate-400 text-xs tracking-widest uppercase">Cards Left</div>
+                    <div id="deck-count-display" class="text-2xl font-bold text-amber-400">0</div>
                 </div>
+                <button onclick="game.toggleSettings()" class="p-2 hover:bg-slate-700 rounded-full transition-colors">
+                    <i data-lucide="settings" class="w-6 h-6 text-slate-400"></i>
+                </button>
             </div>
         </div>
 
-        <!-- Main Battle Area -->
-        <div class="flex-1 flex gap-4 min-h-0">
+        <!-- Main Workspace -->
+        <div class="flex-1 flex p-6 gap-6 min-h-0 relative z-10">
             
-            <!-- Left: Enemy & Graph -->
-            <div class="flex-1 bg-slate-900/90 rounded-xl border border-slate-700 flex flex-col overflow-hidden relative shadow-2xl">
-                <!-- Enemy Info -->
-                <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-                    <div>
-                        <div class="text-xs text-rose-400 font-bold uppercase tracking-widest">Enemy Function</div>
-                        <div id="function-display" class="text-2xl font-bold text-white mt-1 font-serif italic">f(x) = 2x</div>
+            <!-- Left: Graph & Enemy -->
+            <div class="flex-1 bg-slate-900 rounded-2xl border border-slate-700 flex flex-col overflow-hidden relative shadow-2xl">
+                <!-- Enemy Bar -->
+                <div class="h-16 px-6 bg-slate-800 border-b border-slate-700 flex justify-between items-center shrink-0">
+                    <div class="flex flex-col justify-center">
+                        <div class="text-xs text-rose-400 font-bold uppercase tracking-widest">Target Function</div>
+                        <div id="function-display" class="text-2xl font-bold text-white font-serif italic tracking-wide">f(x) = 2x</div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-xs text-slate-400">HP</div>
-                        <div class="w-32 h-4 bg-slate-950 rounded-full overflow-hidden mt-1 border border-slate-600">
+                    <div class="text-right w-1/3">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">ENEMY HP</span>
+                            <span id="hp-text" class="text-slate-300">100/100</span>
+                        </div>
+                        <div class="h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-600">
                             <div id="hp-bar" class="h-full bg-rose-500 transition-all duration-300" style="width: 100%"></div>
                         </div>
-                        <div id="hp-text" class="text-xs mt-1 text-slate-300">100/100</div>
                     </div>
                 </div>
 
-                <!-- Canvas Graph -->
-                <div class="flex-1 relative bg-[#050505] cursor-crosshair">
-                    <canvas id="graph-canvas" class="w-full h-full block"></canvas>
-                    <!-- Overlay for math feedback -->
-                    <div id="math-feedback" class="absolute top-4 right-4 text-right pointer-events-none opacity-0 transition-opacity duration-300">
-                        <div class="text-xs text-slate-400">Antiderivative F(x)</div>
-                        <div id="antideriv-display" class="text-xl text-sky-400 font-serif italic">x²</div>
+                <!-- Canvas Area -->
+                <div class="flex-1 relative bg-[#050505] cursor-move overflow-hidden">
+                    <canvas id="graph-canvas" class="block w-full h-full"></canvas>
+                    
+                    <!-- Antiderivative Hint (Conditional) -->
+                    <div id="math-feedback" class="absolute top-4 right-4 text-right pointer-events-none transition-opacity duration-300 opacity-0">
+                        <div class="bg-slate-900/80 backdrop-blur p-3 rounded border border-slate-700">
+                            <div class="text-xs text-slate-400 uppercase tracking-wider">Antiderivative F(x)</div>
+                            <div id="antideriv-display" class="text-xl text-sky-400 font-serif italic">x²</div>
+                        </div>
+                    </div>
+
+                    <div class="absolute bottom-4 left-4 pointer-events-none text-xs text-slate-600">
+                        Scroll to Zoom • Drag to Pan
                     </div>
                 </div>
             </div>
 
             <!-- Right: Calculation Station -->
-            <div class="w-80 bg-slate-800/90 rounded-xl border border-slate-700 flex flex-col shadow-xl">
-                <div class="p-4 border-b border-slate-700 bg-slate-800">
-                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-widest">Integration Console</h2>
+            <div class="w-96 flex flex-col gap-4">
+                
+                <!-- The Console -->
+                <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-xl overflow-hidden flex flex-col">
+                    <div class="p-4 bg-slate-700/50 border-b border-slate-700 text-center">
+                        <h2 class="text-sm font-bold text-slate-200 uppercase tracking-[0.2em]">Integration Console</h2>
+                    </div>
+                    
+                    <div class="p-6 flex flex-col items-center gap-6 bg-slate-800">
+                        
+                        <!-- Integral UI Construction -->
+                        <div class="flex items-center justify-center gap-4 w-full">
+                            <!-- Symbol -->
+                            <div class="text-slate-500 font-serif italic text-[7rem] leading-none select-none">∫</div>
+                            
+                            <!-- Slots Container -->
+                            <div class="flex flex-col justify-between h-32 py-1">
+                                <!-- Upper Bound (b) -->
+                                <div id="slot-b" class="slot w-16 h-12 bg-slate-900 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center text-xl font-bold text-white cursor-pointer hover:border-sky-400 transition-colors shadow-inner" data-slot="b">
+                                    <span class="text-slate-600 text-xs pointer-events-none font-sans">b</span>
+                                </div>
+                                
+                                <!-- Lower Bound (a) -->
+                                <div id="slot-a" class="slot w-16 h-12 bg-slate-900 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center text-xl font-bold text-white cursor-pointer hover:border-sky-400 transition-colors shadow-inner" data-slot="a">
+                                    <span class="text-slate-600 text-xs pointer-events-none font-sans">a</span>
+                                </div>
+                            </div>
+
+                            <!-- dx -->
+                            <div class="text-3xl font-serif italic text-white/50 ml-2">
+                                f(x) dx
+                            </div>
+                        </div>
+
+                        <!-- Preview Area -->
+                        <div class="w-full space-y-2">
+                            <div class="flex justify-between items-end px-1">
+                                <div class="text-[10px] text-slate-400 uppercase tracking-wider">Evaluation (FTC)</div>
+                                <div class="text-[10px] text-sky-400 font-bold tracking-wider opacity-0" id="hint-indicator">HINTS ON</div>
+                            </div>
+                            <div class="bg-slate-950 p-4 rounded-lg border border-slate-700 font-mono text-sm text-center shadow-inner relative overflow-hidden">
+                                <div id="calculation-preview" class="text-lg text-white/80">
+                                    ? - ? = <span class="text-slate-500">?</span>
+                                </div>
+                            </div>
+                            <div id="validation-msg" class="text-[10px] text-rose-500 text-center h-4 font-bold"></div>
+                        </div>
+
+                        <!-- Button -->
+                        <button id="btn-integrate" class="w-full py-4 bg-sky-600 hover:bg-sky-500 text-white font-bold text-lg tracking-wide rounded-lg shadow-lg shadow-sky-900/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transform active:scale-95" disabled>
+                            INTEGRATE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Log Panel -->
+                <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4 min-h-[4rem] flex items-center justify-center text-center">
+                    <div id="message-log" class="text-sm text-slate-400">
+                        Select bounds to attack.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Hand Area -->
+        <div class="h-48 bg-slate-900 border-t border-slate-700 relative z-20 flex flex-col">
+            <div class="text-xs text-slate-500 px-6 py-2 uppercase tracking-widest font-bold">Your Hand</div>
+            <div class="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-4 flex items-center gap-4" id="hand-container">
+                <!-- Cards go here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals / Overlays -->
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="absolute inset-0 bg-slate-950/95 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="max-w-2xl w-full p-8 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-center">
+            <h1 class="text-6xl font-bold text-sky-400 tracking-tighter mb-2 drop-shadow-lg">INTEGREAT!</h1>
+            <p class="text-slate-300 text-lg mb-8">The Calculus Deckbuilder</p>
+            
+            <div class="grid grid-cols-2 gap-6 text-left mb-8">
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <h3 class="text-white font-bold mb-2 flex items-center gap-2"><i data-lucide="sword" class="w-4 h-4"></i> Mechanics</h3>
+                    <ul class="text-sm text-slate-400 space-y-2 list-disc pl-4">
+                        <li>Drag cards to bounds <b>a</b> and <b>b</b>.</li>
+                        <li>Damage = Area under curve $\int_a^b f(x) dx$.</li>
+                        <li><b>Important:</b> You must have $a < b$.</li>
+                        <li>Cards are consumed upon use!</li>
+                    </ul>
+                </div>
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <h3 class="text-white font-bold mb-2 flex items-center gap-2"><i data-lucide="skull" class="w-4 h-4"></i> Survival</h3>
+                    <ul class="text-sm text-slate-400 space-y-2 list-disc pl-4">
+                        <li>You have a limited hand of cards per level.</li>
+                        <li>Clear the enemy HP before you run out of valid moves.</li>
+                        <li>If you can't kill the enemy, you lose.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button onclick="game.start()" class="px-10 py-4 bg-sky-500 hover:bg-sky-400 text-white font-bold text-xl rounded-lg shadow-lg shadow-sky-900/50 transition-all transform hover:-translate-y-1">START RUN</button>
+            
+            <div class="mt-8 text-xs text-slate-600 font-mono">
+                Made by Rohan Inampudi
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="hidden absolute inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="w-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+            <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="text-white font-bold">Settings</h2>
+                <button onclick="game.toggleSettings()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- Hints Toggle -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-white font-bold">Enable Hints</div>
+                        <div class="text-xs text-slate-400 w-48">Show antiderivative and calculation preview.</div>
+                    </div>
+                    <button id="btn-hints" onclick="game.toggleHints()" class="w-12 h-6 rounded-full bg-slate-700 relative transition-colors">
+                        <div id="hint-knob" class="w-4 h-4 bg-white rounded-full absolute top-1 left-1 transition-transform"></div>
+                    </button>
                 </div>
                 
-                <div class="flex-1 p-6 flex flex-col items-center justify-center gap-6">
-                    
-                    <!-- The Integral UI -->
-                    <div class="relative flex items-center justify-center py-8 w-full bg-slate-900 rounded-lg border border-slate-700/50">
-                        <div class="integral-symbol text-slate-500 font-serif">∫</div>
-                        
-                        <!-- Bounds Slots -->
-                        <div class="absolute -top-2 left-10">
-                            <div id="slot-b" class="slot w-12 h-16 bg-slate-800 border-2 border-dashed border-slate-600 rounded flex items-center justify-center text-xl font-bold text-white cursor-pointer hover:border-sky-400 transition-colors" data-slot="b">
-                                <span class="text-slate-600 text-xs pointer-events-none">b</span>
-                            </div>
-                        </div>
-                        <div class="absolute -bottom-2 left-10">
-                            <div id="slot-a" class="slot w-12 h-16 bg-slate-800 border-2 border-dashed border-slate-600 rounded flex items-center justify-center text-xl font-bold text-white cursor-pointer hover:border-sky-400 transition-colors" data-slot="a">
-                                <span class="text-slate-600 text-xs pointer-events-none">a</span>
-                            </div>
-                        </div>
-
-                        <div class="ml-12 text-2xl font-serif italic text-white" id="integral-inner">
-                            f(x) dx
-                        </div>
-                    </div>
-
-                    <!-- Evaluation Preview -->
-                    <div class="w-full space-y-2">
-                        <div class="text-xs text-slate-400 uppercase tracking-wider text-center">Fundamental Theorem</div>
-                        <div class="bg-slate-950 p-3 rounded border border-slate-700 font-mono text-sm text-center">
-                            <span class="text-sky-400">F(b)</span> - <span class="text-purple-400">F(a)</span>
-                        </div>
-                        <div id="calculation-preview" class="h-8 text-center text-lg font-bold text-white opacity-50">
-                            ...
-                        </div>
-                    </div>
-
-                    <!-- Action Button -->
-                    <button id="btn-integrate" class="w-full py-4 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded shadow-lg shadow-sky-900/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95" disabled>
-                        INTEGRATE!
-                    </button>
-                    
-                    <div id="message-log" class="text-xs text-center text-slate-400 min-h-[1.5em]">
-                        Drag cards to bounds
-                    </div>
+                <div class="pt-4 border-t border-slate-800">
+                     <button onclick="location.reload()" class="w-full py-2 bg-rose-900/50 hover:bg-rose-900 text-rose-200 text-sm font-bold rounded border border-rose-800 transition-colors">ABORT RUN (RESTART)</button>
                 </div>
             </div>
         </div>
-
-        <!-- Bottom: Hand -->
-        <div class="mt-4 h-32 relative">
-            <div class="absolute inset-0 flex items-center justify-center gap-4 px-8" id="hand-container">
-                <!-- Cards injected via JS -->
-            </div>
-        </div>
-
     </div>
 
-    <!-- Overlay Screens -->
-    <div id="start-screen" class="absolute inset-0 bg-slate-900/95 z-50 flex items-center justify-center flex-col gap-6">
-        <h1 class="text-6xl font-bold text-sky-400 tracking-tighter mb-2">INTEGREAT!</h1>
-        <p class="text-slate-300 max-w-md text-center">Defeat functions by finding the area under their curves.</p>
-        <div class="grid grid-cols-2 gap-4 text-sm text-slate-400 bg-slate-800 p-6 rounded border border-slate-700">
-            <div>1. Drag numbers to <span class="text-white">a</span> and <span class="text-white">b</span>.</div>
-            <div>2. Calculate Area: <span class="text-sky-400">∫ f(x) dx</span></div>
-            <div>3. Area = Damage.</div>
-            <div>4. Don't run out of cards!</div>
+    <!-- GAME OVER SCREEN -->
+    <div id="game-over-screen" class="hidden absolute inset-0 bg-slate-950/95 z-50 flex items-center justify-center flex-col gap-6 backdrop-blur">
+        <h1 class="text-6xl font-bold text-rose-500 mb-2 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]">GAME OVER</h1>
+        <div class="text-center space-y-2">
+            <p class="text-xl text-slate-300">You ran out of cards!</p>
+            <p class="text-sm text-slate-500">The function remains unintegrated.</p>
         </div>
-        <button onclick="game.start()" class="px-8 py-3 bg-white text-slate-900 font-bold text-xl rounded hover:bg-sky-400 transition-colors">START INTEGRATING</button>
-    </div>
-
-    <div id="game-over-screen" class="hidden absolute inset-0 bg-slate-900/95 z-50 flex items-center justify-center flex-col gap-6">
-        <h1 class="text-5xl font-bold text-rose-500 mb-2">LIMIT REACHED</h1>
-        <p class="text-xl text-white">Score: <span id="final-score">0</span></p>
-        <button onclick="location.reload()" class="px-8 py-3 bg-white text-slate-900 font-bold rounded hover:bg-rose-400 transition-colors">TRY AGAIN</button>
+        <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 min-w-[300px] text-center">
+            <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Final Score</div>
+            <div id="final-score" class="text-4xl font-bold text-emerald-400">0</div>
+        </div>
+        <button onclick="location.reload()" class="px-8 py-3 bg-white text-slate-900 font-bold rounded hover:bg-sky-400 hover:text-white transition-colors">TRY AGAIN</button>
     </div>
 
     <script>
+        // Init Icons
+        lucide.createIcons();
+
         // --- MATH ENGINE ---
-        // Handles simple polynomials: kx^n
-        
         class Term {
-            constructor(coeff, power) {
-                this.coeff = coeff;
-                this.power = power;
-            }
-
-            // Integrate: x^n -> (1/n+1)x^(n+1)
-            integrate() {
-                const newPower = this.power + 1;
-                const newCoeff = this.coeff / newPower;
-                return new Term(newCoeff, newPower);
-            }
-
-            evaluate(x) {
-                return this.coeff * Math.pow(x, this.power);
-            }
-
-            toString() {
-                if (this.coeff === 0) return "";
-                if (this.power === 0) return `${this.coeff}`;
-                
-                let cStr = this.coeff === 1 ? "" : (this.coeff === -1 ? "-" : this.coeff);
-                if (this.power === 1) return `${cStr}x`;
-                return `${cStr}x^${this.power}`;
-            }
-
+            constructor(coeff, power) { this.coeff = coeff; this.power = power; }
+            integrate() { return new Term(this.coeff / (this.power + 1), this.power + 1); }
+            evaluate(x) { return this.coeff * Math.pow(x, this.power); }
             toHTML() {
                 if (this.coeff === 0) return "";
                 if (this.power === 0) return `${this.coeff}`;
@@ -262,64 +362,132 @@
         }
 
         class Polynomial {
-            constructor(terms) {
-                this.terms = terms; // Array of Term
-            }
-
-            integrate() {
-                return new Polynomial(this.terms.map(t => t.integrate()));
-            }
-
-            evaluate(x) {
-                return this.terms.reduce((sum, t) => sum + t.evaluate(x), 0);
-            }
-
+            constructor(terms) { this.terms = terms; }
+            integrate() { return new Polynomial(this.terms.map(t => t.integrate())); }
+            evaluate(x) { return this.terms.reduce((sum, t) => sum + t.evaluate(x), 0); }
             toDisplay() {
                 if (this.terms.length === 0) return "0";
                 return this.terms.map(t => t.toHTML()).join(" + ").replace(/\+ -/g, "- ");
             }
         }
 
-        // --- GAME STATE ---
+        // --- GAME LOGIC ---
 
         const LEVELS = [
-            { terms: [new Term(1, 0)], hp: 10, name: "Constant Line" },         // f(x) = 1
-            { terms: [new Term(1, 1)], hp: 25, name: "The Linear slope" },       // f(x) = x
-            { terms: [new Term(2, 1)], hp: 40, name: "Steep Slope" },           // f(x) = 2x
-            { terms: [new Term(3, 2)], hp: 150, name: "Parabolic Beast" },      // f(x) = 3x^2
-            { terms: [new Term(1, 1), new Term(2, 0)], hp: 100, name: "Shifted Line" }, // f(x) = x + 2
-            { terms: [new Term(4, 3)], hp: 500, name: "Cubic Crusher" },        // f(x) = 4x^3
-            { terms: [new Term(1, 2), new Term(1, 0)], hp: 200, name: "Quadratic Plus" } // f(x) = x^2 + 1
+            { terms: [new Term(1, 0)], difficulty: 1, name: "Constant Line" },         
+            { terms: [new Term(1, 1)], difficulty: 2, name: "The Linear slope" },       
+            { terms: [new Term(2, 1)], difficulty: 2, name: "Steep Slope" },           
+            { terms: [new Term(1, 2)], difficulty: 3, name: "Parabola Start" },
+            { terms: [new Term(1, 1), new Term(2, 0)], difficulty: 3, name: "Shifted Line" }, 
+            { terms: [new Term(3, 2)], difficulty: 4, name: "Parabolic Beast" },      
+            { terms: [new Term(1, 2), new Term(1, 0)], difficulty: 4, name: "Quadratic Plus" } 
         ];
 
         class Game {
             constructor() {
                 this.levelIndex = 0;
                 this.score = 0;
-                this.deck = [0, 1, 2, 3, 4, 5, 2, 3, 4, 5, 6, 7];
                 this.hand = [];
-                this.currentFunction = null; // Polynomial
-                this.currentAntideriv = null; // Polynomial
+                this.currentFunction = null; 
+                this.currentAntideriv = null; 
                 this.enemyHP = 0;
                 this.maxHP = 0;
                 
+                // Settings
+                this.hintsEnabled = false;
+
                 // Slots
                 this.slotA = null;
                 this.slotB = null;
 
-                // UI References
+                // Graph State
                 this.canvas = document.getElementById('graph-canvas');
                 this.ctx = this.canvas.getContext('2d');
-                this.container = document.getElementById('hand-container');
-                
-                this.resizeCanvas();
-                window.addEventListener('resize', () => this.resizeCanvas());
+                this.pan = { x: 0, y: 0, zoom: 1 };
+                this.isDraggingGraph = false;
+                this.lastMousePos = { x: 0, y: 0 };
 
-                // Bind events
+                // Scaling
+                this.resizeGame();
+                window.addEventListener('resize', () => this.resizeGame());
+
+                // Bind inputs
+                this.bindGraphEvents();
                 document.getElementById('btn-integrate').addEventListener('click', () => this.performIntegration());
-                
-                // Drag and Drop
                 this.setupDragDrop();
+            }
+
+            resizeGame() {
+                const scaler = document.getElementById('app-scaler');
+                const winW = window.innerWidth;
+                const winH = window.innerHeight;
+                const scale = Math.min(winW / 1280, winH / 800);
+                scaler.style.transform = `scale(${scale})`;
+                
+                // Center graph render needs to know about size potentially, but canvas size is fixed via CSS relative to container
+                if(this.currentFunction) this.renderGraph();
+            }
+
+            toggleSettings() {
+                const modal = document.getElementById('settings-modal');
+                modal.classList.toggle('hidden');
+            }
+
+            toggleHints() {
+                this.hintsEnabled = !this.hintsEnabled;
+                const btn = document.getElementById('btn-hints');
+                const knob = document.getElementById('hint-knob');
+                const indicator = document.getElementById('hint-indicator');
+                const feedback = document.getElementById('math-feedback');
+
+                if (this.hintsEnabled) {
+                    btn.classList.replace('bg-slate-700', 'bg-emerald-500');
+                    knob.classList.replace('left-1', 'translate-x-6');
+                    knob.classList.add('left-1'); // keep base
+                    indicator.style.opacity = '1';
+                    feedback.style.opacity = '1';
+                } else {
+                    btn.classList.replace('bg-emerald-500', 'bg-slate-700');
+                    knob.classList.remove('translate-x-6');
+                    indicator.style.opacity = '0';
+                    feedback.style.opacity = '0';
+                }
+                this.updatePreview(); // refresh preview text
+            }
+
+            bindGraphEvents() {
+                this.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const zoomSensitivity = 0.001;
+                    const delta = Math.exp(-e.deltaY * zoomSensitivity);
+                    this.pan.zoom *= delta;
+                    this.pan.zoom = Math.max(0.1, Math.min(this.pan.zoom, 5)); // clamps
+                    this.renderGraph();
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.isDraggingGraph = true;
+                    this.lastMousePos = { x: e.clientX, y: e.clientY };
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.isDraggingGraph) return;
+                    const dx = e.clientX - this.lastMousePos.x;
+                    const dy = e.clientY - this.lastMousePos.y;
+                    this.lastMousePos = { x: e.clientX, y: e.clientY };
+                    
+                    // Adjust pan based on current scaling of the app
+                    // We need to divide by the app scale factor to get 1:1 mouse movement
+                    const appScale = parseFloat(document.getElementById('app-scaler').style.transform.replace('scale(', '').replace(')', '')) || 1;
+                    
+                    this.pan.x += dx / appScale;
+                    this.pan.y += dy / appScale;
+                    this.renderGraph();
+                });
+
+                window.addEventListener('mouseup', () => {
+                    this.isDraggingGraph = false;
+                });
             }
 
             start() {
@@ -328,73 +496,92 @@
                 this.drawLoop();
             }
 
-            resizeCanvas() {
-                const parent = this.canvas.parentElement;
-                this.canvas.width = parent.clientWidth;
-                this.canvas.height = parent.clientHeight;
-                if(this.currentFunction) this.renderGraph();
-            }
-
             loadLevel(index) {
                 if (index >= LEVELS.length) {
-                    alert("YOU WIN! Calculus Master!");
-                    location.reload();
-                    return;
+                    // Loop or Win
+                    index = 0; // Infinite loop for roguelike feel, maybe increase difficulty later
                 }
                 
                 this.levelIndex = index;
                 const data = LEVELS[index];
                 
-                // Set up Math
                 this.currentFunction = new Polynomial(data.terms);
                 this.currentAntideriv = this.currentFunction.integrate();
                 
-                // Set Stats
-                this.maxHP = data.hp;
-                this.enemyHP = data.hp;
+                // Generate Solvable Hand & HP
+                this.generateLevelData(data.difficulty);
 
                 // Update UI
                 document.getElementById('level-display').innerText = index + 1;
                 document.getElementById('function-display').innerHTML = `f(x) = ${this.currentFunction.toDisplay()}`;
                 document.getElementById('antideriv-display').innerHTML = this.currentAntideriv.toDisplay();
-                document.getElementById('math-feedback').style.opacity = '1';
+                
+                // Reset Graph View
+                this.pan = { x: 0, y: 0, zoom: 1 };
                 
                 this.updateHPUI();
-                
-                // Deal Cards
-                this.dealHand();
-                
-                // Reset slots
+                this.renderHand();
                 this.clearSlots();
             }
 
-            dealHand() {
-                this.container.innerHTML = '';
-                // Pick 5 random cards from deck
-                const handSize = 5;
-                this.hand = [];
-                for(let i=0; i<handSize; i++) {
-                    const val = this.deck[Math.floor(Math.random() * this.deck.length)];
-                    this.hand.push({ id: Math.random().toString(36), value: val });
+            generateLevelData(difficulty) {
+                // Determine a target HP based on creating valid pairs
+                // We want to force the player to find pairs (a, b) where a < b
+                const possibleNumbers = [0, 1, 2, 3, 4, 5, 6, 7];
+                let generatedHP = 0;
+                let requiredCards = [];
+                
+                // Create 2-4 pairs required to win
+                const pairsCount = 2 + Math.floor(Math.random() * 2); 
+                
+                for(let i=0; i<pairsCount; i++) {
+                    const a = Math.floor(Math.random() * 5); // 0-4
+                    const b = a + 1 + Math.floor(Math.random() * 3); // a+1 to a+3
+                    
+                    const dmg = this.currentAntideriv.evaluate(b) - this.currentAntideriv.evaluate(a);
+                    if (dmg > 0) {
+                        generatedHP += Math.floor(dmg);
+                        requiredCards.push(a, b);
+                    }
                 }
-                this.renderHand();
+
+                // Add Junk cards (random stuff)
+                const junkCount = 4;
+                for(let i=0; i<junkCount; i++) {
+                    requiredCards.push(Math.floor(Math.random() * 8));
+                }
+
+                // Shuffle
+                requiredCards.sort(() => Math.random() - 0.5);
+
+                this.maxHP = generatedHP;
+                this.enemyHP = generatedHP;
+                
+                // Build Hand objects
+                this.hand = requiredCards.map(val => ({
+                    id: Math.random().toString(36),
+                    value: val
+                }));
             }
 
             renderHand() {
-                this.container.innerHTML = '';
+                const container = document.getElementById('hand-container');
+                container.innerHTML = '';
+                
+                document.getElementById('deck-count-display').innerText = this.hand.length;
+
                 this.hand.forEach(card => {
                     const el = document.createElement('div');
-                    el.className = 'card w-16 h-24 bg-white rounded-lg shadow-lg flex items-center justify-center text-3xl font-bold text-slate-800 cursor-grab relative';
+                    el.className = 'card shrink-0 w-20 h-28 bg-slate-100 rounded-lg shadow-lg flex flex-col items-center justify-center cursor-grab relative border-2 border-slate-300';
                     el.draggable = true;
                     el.dataset.id = card.id;
                     el.dataset.value = card.value;
                     el.innerHTML = `
-                        <span class="pointer-events-none">${card.value}</span>
-                        <div class="absolute top-1 left-2 text-xs text-slate-400 pointer-events-none">${card.value}</div>
-                        <div class="absolute bottom-1 right-2 text-xs text-slate-400 pointer-events-none">${card.value}</div>
+                        <div class="text-xs text-slate-400 font-bold absolute top-1 left-2">${card.value}</div>
+                        <div class="text-4xl font-bold text-slate-800">${card.value}</div>
+                        <div class="text-xs text-slate-400 font-bold absolute bottom-1 right-2">${card.value}</div>
                     `;
                     
-                    // Drag events
                     el.addEventListener('dragstart', (e) => {
                         e.dataTransfer.setData('text/plain', JSON.stringify(card));
                         el.classList.add('dragging');
@@ -404,7 +591,7 @@
                         el.classList.remove('dragging');
                     });
 
-                    this.container.appendChild(el);
+                    container.appendChild(el);
                 });
             }
 
@@ -425,19 +612,17 @@
                         e.preventDefault();
                         slot.classList.remove('drag-over');
                         const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                        
                         this.fillSlot(slot.dataset.slot, data);
                     });
                     
-                    // Click to remove
                     slot.addEventListener('click', () => {
-                        if (slot.dataset.slot === 'a' && this.slotA !== null) this.returnCardToHand(this.slotA);
-                        if (slot.dataset.slot === 'b' && this.slotB !== null) this.returnCardToHand(this.slotB);
+                        if (slot.dataset.slot === 'a' && this.slotA) this.returnCardToHand(this.slotA);
+                        if (slot.dataset.slot === 'b' && this.slotB) this.returnCardToHand(this.slotB);
                         
                         if(slot.dataset.slot === 'a') this.slotA = null;
                         if(slot.dataset.slot === 'b') this.slotB = null;
                         
-                        slot.innerHTML = `<span class="text-slate-600 text-xs pointer-events-none">${slot.dataset.slot}</span>`;
+                        slot.innerHTML = `<span class="text-slate-600 text-xs pointer-events-none font-sans">${slot.dataset.slot}</span>`;
                         slot.classList.remove('bg-sky-900', 'border-sky-400');
                         this.updatePreview();
                     });
@@ -445,19 +630,15 @@
             }
 
             fillSlot(type, cardData) {
-                // If slot already has a value, return it to hand
                 if (type === 'a' && this.slotA) this.returnCardToHand(this.slotA);
                 if (type === 'b' && this.slotB) this.returnCardToHand(this.slotB);
 
-                // Set new value
                 if (type === 'a') this.slotA = cardData;
                 if (type === 'b') this.slotB = cardData;
 
-                // Remove from current hand DOM and Array
                 this.hand = this.hand.filter(c => c.id !== cardData.id);
                 this.renderHand();
 
-                // Update Slot UI
                 const slotEl = document.getElementById(`slot-${type}`);
                 slotEl.innerHTML = `<span class="text-3xl text-sky-400 font-bold pointer-events-none">${cardData.value}</span>`;
                 slotEl.classList.add('bg-sky-900', 'border-sky-400');
@@ -475,7 +656,7 @@
                 this.slotB = null;
                 ['slot-a', 'slot-b'].forEach(id => {
                     const s = document.getElementById(id);
-                    s.innerHTML = `<span class="text-slate-600 text-xs pointer-events-none">${s.dataset.slot}</span>`;
+                    s.innerHTML = `<span class="text-slate-600 text-xs pointer-events-none font-sans">${s.dataset.slot}</span>`;
                     s.classList.remove('bg-sky-900', 'border-sky-400');
                 });
                 this.updatePreview();
@@ -484,68 +665,91 @@
             updatePreview() {
                 const btn = document.getElementById('btn-integrate');
                 const preview = document.getElementById('calculation-preview');
+                const validMsg = document.getElementById('validation-msg');
                 
+                validMsg.innerText = '';
+
                 if (this.slotA !== null && this.slotB !== null) {
-                    btn.disabled = false;
-                    const a = this.slotA.value;
-                    const b = this.slotB.value;
+                    const a = parseInt(this.slotA.value);
+                    const b = parseInt(this.slotB.value);
                     
+                    // Validation Rule
+                    if (a > b) {
+                        btn.disabled = true;
+                        validMsg.innerText = `Invalid Bounds: a (${a}) > b (${b})`;
+                        preview.innerHTML = `<span class="text-rose-500 font-bold">INVALID</span>`;
+                        return;
+                    }
+
+                    if (a === b) {
+                        btn.disabled = true;
+                        validMsg.innerText = `Zero Width: a = b`;
+                        preview.innerHTML = `<span class="text-rose-500 font-bold">NO AREA</span>`;
+                        return;
+                    }
+
+                    btn.disabled = false;
                     const Fa = this.currentAntideriv.evaluate(a);
                     const Fb = this.currentAntideriv.evaluate(b);
                     const result = Fb - Fa;
 
-                    preview.innerHTML = `
-                        <span class="text-sky-400">${Fb.toFixed(1)}</span> - 
-                        <span class="text-purple-400">${Fa.toFixed(1)}</span> = 
-                        <span class="text-white font-bold">${result.toFixed(1)}</span>
-                    `;
+                    if (this.hintsEnabled) {
+                        preview.innerHTML = `
+                            <span class="text-sky-400">${Fb.toFixed(1)}</span> - 
+                            <span class="text-purple-400">${Fa.toFixed(1)}</span> = 
+                            <span class="text-white font-bold">${result.toFixed(1)}</span>
+                        `;
+                    } else {
+                        preview.innerHTML = `? - ? = <span class="text-white font-bold">?</span>`;
+                    }
                 } else {
                     btn.disabled = true;
-                    preview.innerHTML = '...';
+                    if(this.hintsEnabled) {
+                        preview.innerHTML = 'F(b) - F(a)';
+                    } else {
+                        preview.innerHTML = '? - ? = ?';
+                    }
                 }
             }
 
             performIntegration() {
                 if (this.slotA === null || this.slotB === null) return;
 
-                const a = this.slotA.value;
-                const b = this.slotB.value;
+                const a = parseInt(this.slotA.value);
+                const b = parseInt(this.slotB.value);
                 const damage = this.currentAntideriv.evaluate(b) - this.currentAntideriv.evaluate(a);
 
-                // Visual FX
+                // VFX
                 const feedback = document.createElement('div');
-                feedback.className = 'particle text-4xl font-bold text-rose-400 fixed top-1/2 left-1/2 z-50';
-                feedback.innerText = `-${damage.toFixed(0)}`;
+                feedback.className = 'particle text-6xl font-bold text-rose-500 fixed z-50';
+                feedback.style.left = '50%';
+                feedback.style.top = '40%';
+                feedback.innerText = `-${Math.floor(damage)}`;
                 document.body.appendChild(feedback);
                 setTimeout(() => feedback.remove(), 1000);
 
-                // Logic
-                if (damage <= 0) {
-                    document.getElementById('message-log').innerText = "Negative/Zero Area deals no damage!";
-                    document.getElementById('message-log').className = "text-rose-500 font-bold text-center";
-                } else {
-                    this.enemyHP -= damage;
-                    this.score += Math.floor(damage);
-                    document.getElementById('score-display').innerText = this.score;
-                    document.getElementById('message-log').innerText = `Integrated from ${a} to ${b} for ${damage.toFixed(1)} damage!`;
-                    document.getElementById('message-log').className = "text-emerald-400 font-bold text-center";
-                    
-                    // Shake effect
-                    document.getElementById('game-container').classList.add('shake');
-                    setTimeout(() => document.getElementById('game-container').classList.remove('shake'), 500);
-                }
+                this.enemyHP -= damage;
+                this.score += Math.floor(damage);
+                document.getElementById('score-display').innerText = this.score;
+                
+                const log = document.getElementById('message-log');
+                log.innerHTML = `<span class="text-emerald-400 font-bold">HIT!</span> Integrated from ${a} to ${b} for <span class="text-white font-bold">${damage.toFixed(1)}</span> dmg`;
+
+                // Shake
+                document.getElementById('app-scaler').classList.add('shake');
+                setTimeout(() => document.getElementById('app-scaler').classList.remove('shake'), 500);
 
                 this.updateHPUI();
                 
-                // Clear and deal new card
-                this.clearSlots();
-                
-                // Keep hand filled
-                while(this.hand.length < 5) {
-                    const val = this.deck[Math.floor(Math.random() * this.deck.length)];
-                    this.hand.push({ id: Math.random().toString(36), value: val });
-                }
-                this.renderHand();
+                // Clear Used Cards (Do NOT return to hand)
+                this.slotA = null;
+                this.slotB = null;
+                ['slot-a', 'slot-b'].forEach(id => {
+                    const s = document.getElementById(id);
+                    s.innerHTML = `<span class="text-slate-600 text-xs pointer-events-none font-sans">${s.dataset.slot}</span>`;
+                    s.classList.remove('bg-sky-900', 'border-sky-400');
+                });
+                this.updatePreview();
 
                 // Check Win
                 if (this.enemyHP <= 0) {
@@ -554,71 +758,83 @@
                         this.loadLevel(this.levelIndex);
                     }, 1000);
                 } else {
-                    // Check Loss (Run out of effective cards? - Simplified for this version: infinite deck)
+                    // Check Loss
+                    if (this.hand.length < 2) {
+                        // Impossible to make another move
+                        document.getElementById('game-over-screen').classList.remove('hidden');
+                        document.getElementById('final-score').innerText = this.score;
+                    }
                 }
             }
 
             updateHPUI() {
                 const pct = Math.max(0, (this.enemyHP / this.maxHP) * 100);
                 document.getElementById('hp-bar').style.width = `${pct}%`;
-                document.getElementById('hp-text').innerText = `${Math.ceil(this.enemyHP)}/${this.maxHP}`;
+                document.getElementById('hp-text').innerText = `${Math.ceil(Math.max(0, this.enemyHP))}/${this.maxHP}`;
             }
 
             // --- RENDERING ---
             renderGraph() {
-                const w = this.canvas.width;
-                const h = this.canvas.height;
+                const w = this.canvas.width = this.canvas.clientWidth;
+                const h = this.canvas.height = this.canvas.clientHeight;
                 const ctx = this.ctx;
 
                 ctx.clearRect(0, 0, w, h);
 
-                // Coordinate System
-                const scaleX = w / 10; // Show up to x=10
-                const scaleY = h / (this.maxHP > 100 ? 500 : 50); // Adaptive Y scale
-                const originY = h - 30;
-                const originX = 30;
-
-                // Draw Axes
-                ctx.strokeStyle = "#475569";
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(originX, 0);
-                ctx.lineTo(originX, h);
-                ctx.moveTo(0, originY);
-                ctx.lineTo(w, originY);
-                ctx.stroke();
+                // Camera Logic
+                const scaleX = (w / 10) * this.pan.zoom; 
+                const scaleY = (h / (this.maxHP > 100 ? 500 : 50)) * this.pan.zoom; 
+                const originX = 50 + this.pan.x;
+                const originY = h - 50 + this.pan.y;
 
                 // Draw Grid
                 ctx.strokeStyle = "#1e293b";
                 ctx.lineWidth = 1;
-                for(let i=0; i<12; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(originX + i*scaleX, 0);
-                    ctx.lineTo(originX + i*scaleX, h);
-                    ctx.stroke();
-                    
-                    // Label
-                    ctx.fillStyle = "#64748b";
-                    ctx.font = "10px monospace";
-                    ctx.fillText(i, originX + i*scaleX - 3, originY + 15);
+                
+                // Vertical Lines
+                for(let i=0; i<20; i++) {
+                    const x = originX + i * scaleX;
+                    if(x < 0 || x > w) continue;
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+                    ctx.fillStyle = "#64748b"; ctx.font = "12px monospace"; ctx.fillText(i, x - 4, originY + 20);
                 }
+                
+                // Horizontal Lines (Y-Axis)
+                const yStep = 10 * Math.ceil(5/this.pan.zoom); // Dynamic stepping
+                for(let i=0; i<20; i++) {
+                    const val = i * yStep;
+                    const y = originY - val * scaleY;
+                    if(y < 0 || y > h) continue;
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+                    if(i > 0) {
+                        ctx.fillStyle = "#64748b"; ctx.font = "12px monospace"; ctx.fillText(val, originX - 30, y + 4);
+                    }
+                }
+
+                // Draw Axes
+                ctx.strokeStyle = "#94a3b8";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(originX, 0); ctx.lineTo(originX, h); // Y Axis
+                ctx.moveTo(0, originY); ctx.lineTo(w, originY); // X Axis
+                ctx.stroke();
 
                 // Draw Function
                 ctx.beginPath();
-                ctx.strokeStyle = "#38bdf8"; // Sky 400
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = "#38bdf8"; 
+                ctx.lineWidth = 4;
                 
                 let startDraw = false;
-
-                for(let px = 0; px < w; px++) {
-                    // Convert pixel x to math x
+                for(let px = 0; px < w; px+=2) { // Step optimization
                     const mathX = (px - originX) / scaleX;
-                    if (mathX < 0) continue;
-
                     const mathY = this.currentFunction.evaluate(mathX);
-                    
-                    // Convert math y to pixel y
                     const py = originY - (mathY * scaleY);
+
+                    // Clamp large values to prevent canvas rendering bugs
+                    if (py < -1000 || py > h + 1000) {
+                        startDraw = false;
+                        continue;
+                    }
 
                     if (!startDraw) {
                         ctx.moveTo(px, py);
@@ -629,55 +845,53 @@
                 }
                 ctx.stroke();
 
-                // Draw Active Area (Integration Zone)
+                // Draw Active Area
                 if (this.slotA !== null && this.slotB !== null) {
-                    const a = this.slotA.value;
-                    const b = this.slotB.value;
+                    const a = parseInt(this.slotA.value);
+                    const b = parseInt(this.slotB.value);
                     
-                    const startX = originX + a * scaleX;
-                    const endX = originX + b * scaleX;
+                    if (a < b) {
+                        const startX = originX + a * scaleX;
+                        const endX = originX + b * scaleX;
 
-                    // Create Gradient
-                    const grad = ctx.createLinearGradient(0, 0, 0, h);
-                    grad.addColorStop(0, "rgba(244, 63, 94, 0.5)"); // Rose
-                    grad.addColorStop(1, "rgba(244, 63, 94, 0.1)");
+                        const grad = ctx.createLinearGradient(0, 0, 0, h);
+                        grad.addColorStop(0, "rgba(244, 63, 94, 0.5)"); 
+                        grad.addColorStop(1, "rgba(244, 63, 94, 0.1)");
 
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    ctx.moveTo(startX, originY); // Bottom left
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.moveTo(startX, originY);
 
-                    // Trace curve
-                    for(let px = startX; px <= endX; px++) {
-                        const mathX = (px - originX) / scaleX;
-                        const mathY = this.currentFunction.evaluate(mathX);
-                        const py = originY - (mathY * scaleY);
-                        ctx.lineTo(px, py);
+                        for(let px = startX; px <= endX; px++) {
+                            const mathX = (px - originX) / scaleX;
+                            const mathY = this.currentFunction.evaluate(mathX);
+                            const py = originY - (mathY * scaleY);
+                            ctx.lineTo(px, py);
+                        }
+
+                        ctx.lineTo(endX, originY);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        ctx.strokeStyle = "#f43f5e";
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(startX, originY); ctx.lineTo(startX, originY - this.currentFunction.evaluate(a)*scaleY);
+                        ctx.moveTo(endX, originY); ctx.lineTo(endX, originY - this.currentFunction.evaluate(b)*scaleY);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
                     }
-
-                    ctx.lineTo(endX, originY); // Bottom right
-                    ctx.closePath();
-                    ctx.fill();
-
-                    // Boundary lines
-                    ctx.strokeStyle = "#f43f5e";
-                    ctx.setLineDash([5, 5]);
-                    ctx.beginPath();
-                    ctx.moveTo(startX, originY);
-                    ctx.lineTo(startX, 0);
-                    ctx.moveTo(endX, originY);
-                    ctx.lineTo(endX, 0);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
                 }
             }
 
             drawLoop() {
-                this.renderGraph();
+                if(!this.isDraggingGraph) { // Only auto-render if not dragging to save perf
+                    // this.renderGraph(); 
+                }
                 requestAnimationFrame(() => this.drawLoop());
             }
         }
 
-        // Init
         const game = new Game();
 
     </script>
