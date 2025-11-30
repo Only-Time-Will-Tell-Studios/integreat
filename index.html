@@ -7,6 +7,29 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script"></script>
+    <script>
+        // style the MathJax such that its container takes up less space, latex is not centered, and it doesn't breaak the line it is in 
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\[', '\]']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            // style the MathJax such that its container takes up less space, latex is not centered, and it doesn't breaak the line it is in 
+            'HTML-CSS' : {
+                scale: 50,
+                linebreaks: { automatic: false },
+                styles: {
+                    '.MathJax_Display': { 'text-align': 'left', 'margin': '0px' }
+                }
+            }
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
         
@@ -159,7 +182,7 @@
                 <!-- Enemy Bar -->
                 <div class="h-16 px-6 bg-slate-800 border-b border-slate-700 flex justify-between items-center shrink-0">
                     <div class="flex flex-col justify-center">
-                        <div class="text-xs text-rose-400 font-bold uppercase tracking-widest">Target Function</div>
+                        <div class="text-xs text-rose-400 font-bold uppercase tracking-widest">Enemy Function</div>
                         <div id="function-display" class="text-2xl font-bold text-white font-serif italic tracking-wide">f(x) = 2x</div>
                     </div>
                     <div class="text-right w-1/3">
@@ -200,12 +223,12 @@
                         <h2 class="text-sm font-bold text-slate-200 uppercase tracking-[0.2em]">Integration Console</h2>
                     </div>
                     
-                    <div class="p-6 flex flex-col items-center gap-6 bg-slate-800">
+                    <div class="p-6 flex flex-col items-center gap-3 bg-slate-800">
                         
                         <!-- Integral UI Construction -->
                         <div class="flex items-center justify-center gap-4 w-full">
                             <!-- Symbol -->
-                            <div class="text-slate-500 font-serif italic text-[7rem] leading-none select-none">∫</div>
+                            <div class="text-slate-500 font-serif italic text-[7rem] leading-none select-none align-items-center" style="transform: translateY(-8%);">∫</div>
                             
                             <!-- Slots Container -->
                             <div class="flex flex-col justify-between h-32 py-1">
@@ -227,12 +250,12 @@
                         </div>
 
                         <!-- Preview Area -->
-                        <div class="w-full space-y-2">
+                        <div class="w-full space-y-1">
                             <div class="flex justify-between items-end px-1">
                                 <div class="text-[10px] text-slate-400 uppercase tracking-wider">Evaluation (FTC)</div>
                                 <div class="text-[10px] text-sky-400 font-bold tracking-wider opacity-0" id="hint-indicator">HINTS ON</div>
                             </div>
-                            <div class="bg-slate-950 p-4 rounded-lg border border-slate-700 font-mono text-sm text-center shadow-inner relative overflow-hidden">
+                            <div class="bg-slate-950 p-2 rounded-lg border border-slate-700 font-mono text-sm text-center shadow-inner relative overflow-hidden">
                                 <div id="calculation-preview" class="text-lg text-white/80">
                                     ? - ? = <span class="text-slate-500">?</span>
                                 </div>
@@ -241,7 +264,7 @@
                         </div>
 
                         <!-- Button -->
-                        <button id="btn-integrate" class="w-full py-4 bg-sky-600 hover:bg-sky-500 text-white font-bold text-lg tracking-wide rounded-lg shadow-lg shadow-sky-900/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transform active:scale-95" disabled>
+                        <button id="btn-integrate" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold text-lg tracking-wide rounded-lg shadow-lg shadow-sky-900/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transform active:scale-95" disabled>
                             INTEGRATE
                         </button>
                     </div>
@@ -273,15 +296,15 @@
     <div id="start-screen" class="absolute inset-0 bg-slate-950/95 z-50 flex items-center justify-center backdrop-blur-sm">
         <div class="max-w-2xl w-full p-8 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl text-center">
             <h1 class="text-6xl font-bold text-sky-400 tracking-tighter mb-2 drop-shadow-lg">INTEGREAT!</h1>
-            <p class="text-slate-300 text-lg mb-8">The Calculus Deckbuilder</p>
+            <p class="text-slate-300 text-lg mb-8">The Calculus Roguelike</p>
             
             <div class="grid grid-cols-2 gap-6 text-left mb-8">
                 <div class="bg-slate-800 p-4 rounded border border-slate-700">
                     <h3 class="text-white font-bold mb-2 flex items-center gap-2"><i data-lucide="sword" class="w-4 h-4"></i> Mechanics</h3>
                     <ul class="text-sm text-slate-400 space-y-2 list-disc pl-4">
                         <li>Drag cards to bounds <b>a</b> and <b>b</b>.</li>
-                        <li>Damage = Area under curve $\int_a^b f(x) dx$.</li>
-                        <li><b>Important:</b> You must have $a < b$.</li>
+                        <li>Damage = Area under curve $$\int_a^b f(x) dx$$.</li>
+                        <li><b>Important:</b> You must have a &lt; b.</li>
                         <li>Cards are consumed upon use!</li>
                     </ul>
                 </div>
@@ -290,7 +313,7 @@
                     <ul class="text-sm text-slate-400 space-y-2 list-disc pl-4">
                         <li>You have a limited hand of cards per level.</li>
                         <li>Clear the enemy HP before you run out of valid moves.</li>
-                        <li>If you can't kill the enemy, you lose.</li>
+                        <li>If you can't kill the enemy before running out of cards, you lose.</li>
                     </ul>
                 </div>
             </div>
@@ -701,14 +724,15 @@
                             <span class="text-white font-bold">${result.toFixed(1)}</span>
                         `;
                     } else {
-                        preview.innerHTML = `? - ? = <span class="text-white font-bold">?</span>`;
+                        // Hints OFF: Show FTC structure
+                        preview.innerHTML = `F(${b}) - F(${a}) = <span class="text-white font-bold">?</span>`;
                     }
                 } else {
                     btn.disabled = true;
                     if(this.hintsEnabled) {
                         preview.innerHTML = 'F(b) - F(a)';
                     } else {
-                        preview.innerHTML = '? - ? = ?';
+                        preview.innerHTML = 'F(b) - F(a)';
                     }
                 }
             }
