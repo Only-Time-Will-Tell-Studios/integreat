@@ -107,6 +107,12 @@
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Tutorial Overlay Animation */
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -135,7 +141,7 @@
 
                 <!-- Score -->
                 <div class="flex flex-col items-center min-w-[100px] bg-slate-800/50 p-2 rounded border border-slate-700">
-                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Score</div>
+                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Round Score</div>
                     <div id="score-display" class="text-2xl font-bold text-emerald-300">0</div>
                 </div>
 
@@ -186,7 +192,6 @@
                         </div>
                         <div class="h-4 bg-slate-950 rounded-full overflow-hidden border border-slate-600 relative">
                             <div id="hp-bar" class="h-full bg-rose-500 transition-all duration-300" style="width: 100%"></div>
-                            <!-- HP Markers for exact kill visual aid? maybe later -->
                         </div>
                     </div>
                 </div>
@@ -212,7 +217,7 @@
             <!-- RIGHT: INTEGRATION CONSOLE -->
             <div class="w-[400px] flex flex-col gap-4">
                 
-                <!-- Deck Info -->
+                <!-- Deck Info (Hidden by User Request) -->
                 <div class="flex justify-between items-center px-2" style="display: none;">
                     <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Hand Size</div>
                     <div class="text-xs font-bold text-slate-300"><span id="hand-count">0</span> Cards</div>
@@ -286,7 +291,8 @@
                 <span>Your Deck</span>
                 <span class="text-sky-500" id="tutorial-msg"></span>
             </div>
-            <div class="flex-1 overflow-x-auto px-6 pb-0 flex items-center gap-4" id="hand-container">
+            <!-- Added pt-5 to fix card hover clipping -->
+            <div class="flex-1 overflow-x-auto px-6 pt-5 pb-0 flex items-center gap-4" id="hand-container">
                 <!-- Cards Injected Here -->
             </div>
         </div>
@@ -294,6 +300,20 @@
     </div>
 
     <!-- SCREENS & MODALS -->
+
+    <!-- Tutorial Popup Modal -->
+    <div id="tutorial-modal" class="hidden absolute bottom-48 left-1/2 transform -translate-x-1/2 z-50 w-[500px]">
+        <div class="bg-slate-800/95 border border-sky-500/50 p-6 rounded-xl shadow-2xl backdrop-blur-md relative animate-[slideIn_0.3s_ease-out]">
+            <div class="absolute -top-3 -left-3 bg-sky-500 text-white p-2 rounded-lg shadow-lg">
+                <i data-lucide="info" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-sky-400 font-bold uppercase tracking-wider mb-2" id="tutorial-title">Tutorial</h3>
+            <p class="text-slate-200 text-sm leading-relaxed mb-4" id="tutorial-body">...</p>
+            <div class="text-right">
+                <button onclick="document.getElementById('tutorial-modal').classList.add('hidden')" class="text-xs text-slate-500 hover:text-white uppercase font-bold tracking-widest">Dismiss</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="absolute inset-0 bg-slate-950 z-50 flex items-center justify-center">
@@ -310,17 +330,17 @@
                     <ul class="text-sm text-slate-300 space-y-2 list-disc pl-5 leading-relaxed">
                         <li>Calculate area: $\int_a^b f(x) dx$.</li>
                         <li><b>Damage = Area</b>.</li>
-                        <li><b>Overkill Penalty:</b> Dealing more damage than HP hurts your score.</li>
-                        <li><b>Exact Kill:</b> Hit 0 HP exactly for a bonus!</li>
+                        <li><b>Overkill Penalty:</b> Dealing extra damage reduces score! Formula: $1 + 2 \times \%_{extra}$.</li>
+                        <li><b>Exact Kill:</b> Hit 0 HP exactly for a massive bonus!</li>
                     </ul>
                 </div>
                 <div class="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 backdrop-blur-sm">
                     <h3 class="text-rose-400 font-bold mb-3 flex items-center gap-2 text-lg"><i data-lucide="bomb" class="w-5 h-5"></i> Danger Zones</h3>
                     <ul class="text-sm text-slate-300 space-y-2 list-disc pl-5 leading-relaxed">
-                        <li><b>Explosive Bosses:</b> Appear at the end of rounds.</li>
+                        <li><b>Explosive Bosses:</b> Appear every 3 rounds.</li>
                         <li><b>The Rule:</b> You MUST kill them exactly.</li>
                         <li><b>Failure:</b> Overkilling a Boss ends the run instantly.</li>
-                        <li>Cards are limited. Don't run out!</li>
+                        <li>Regular Explosives reset Round Score to 0.</li>
                     </ul>
                 </div>
             </div>
@@ -342,11 +362,14 @@
 
     <!-- SHOP / ROUND END SCREEN -->
     <div id="shop-screen" class="hidden absolute inset-0 bg-slate-950 z-40 flex items-center justify-center">
-        <div class="max-w-2xl w-full p-8 bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl text-center">
-            <h2 class="text-4xl font-bold text-white mb-2">ROUND COMPLETE</h2>
-            <div class="w-24 h-1 bg-sky-500 mx-auto mb-8 rounded-full"></div>
+        <div class="max-w-2xl w-full p-8 bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl text-center relative overflow-hidden">
+             <!-- Decorative BG -->
+            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDQwaDQwVjBIMHY0MHptMjAgMjBWMjBoMjB2MjBIMjB6IiBmaWxsPSIjMWUyOTNiIiBmaWxsLW9wYWNpdHk9IjAuMSIvPjwvZz48L3N2Zz4=')] opacity-20"></div>
 
-            <div class="grid grid-cols-3 gap-4 mb-8">
+            <h2 class="text-4xl font-bold text-white mb-2 relative z-10">ROUND COMPLETE</h2>
+            <div class="w-24 h-1 bg-sky-500 mx-auto mb-8 rounded-full relative z-10"></div>
+
+            <div class="grid grid-cols-3 gap-4 mb-8 relative z-10">
                 <div class="bg-slate-800 p-4 rounded-xl">
                     <div class="text-xs text-slate-400 uppercase tracking-widest">Base Score</div>
                     <div class="text-2xl font-bold text-white" id="shop-score">0</div>
@@ -363,13 +386,17 @@
                 </div>
             </div>
 
-            <div class="bg-slate-800/50 p-8 rounded-xl border border-dashed border-slate-700 mb-8">
+            <div class="bg-slate-800/50 p-8 rounded-xl border border-dashed border-slate-700 mb-8 relative z-10">
                 <i data-lucide="store" class="w-12 h-12 text-slate-600 mx-auto mb-2"></i>
                 <h3 class="text-xl font-bold text-slate-500">Shop Coming Soon</h3>
                 <p class="text-slate-600 text-sm">Spend your coins on upgrades in future updates.</p>
             </div>
+            
+            <div id="next-round-warning" class="mb-4 text-rose-400 font-bold uppercase tracking-widest animate-pulse hidden relative z-10">
+                Warning: Explosive Boss Approaching
+            </div>
 
-            <button onclick="game.nextRound()" class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl rounded-xl shadow-lg transition-all transform hover:-translate-y-1">
+            <button onclick="game.nextRound()" class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl rounded-xl shadow-lg transition-all transform hover:-translate-y-1 relative z-10">
                 START NEXT ROUND
             </button>
         </div>
@@ -426,14 +453,32 @@
         lucide.createIcons();
 
         // --- MATH ENGINE ---
+        
+        // Helper to convert float to fraction string (e.g. 0.333 -> 1/3)
+        function floatToFraction(x) {
+            const tolerance = 1.0E-6;
+            let h1 = 1, h2 = 0, k1 = 0, k2 = 1;
+            let b = x;
+            do {
+                let a = Math.floor(b);
+                let aux = h1; h1 = a * h1 + h2; h2 = aux;
+                aux = k1; k1 = a * k1 + k2; k2 = aux;
+                b = 1 / (b - a);
+            } while (Math.abs(x - h1 / k1) > x * tolerance);
+            
+            if (k1 === 1) return `${h1}`; // Integer
+            return `${h1}/${k1}`;
+        }
+
         class Term {
             constructor(coeff, power) { this.coeff = coeff; this.power = power; }
             integrate() { return new Term(this.coeff / (this.power + 1), this.power + 1); }
             evaluate(x) { return this.coeff * Math.pow(x, this.power); }
             toHTML() {
                 if (this.coeff === 0) return "";
-                if (this.power === 0) return `${this.coeff}`;
-                let cStr = this.coeff === 1 ? "" : (this.coeff === -1 ? "-" : this.coeff);
+                if (this.power === 0) return floatToFraction(this.coeff); // Use fraction display
+                
+                let cStr = this.coeff === 1 ? "" : (this.coeff === -1 ? "-" : floatToFraction(this.coeff));
                 if (this.power === 1) return `${cStr}x`;
                 return `${cStr}x<sup>${this.power}</sup>`;
             }
@@ -478,8 +523,11 @@
                 const anti = func.integrate();
 
                 // Puzzle Generation:
-                // We need to ensure the level is solvable exactly for bosses.
+                // If it is Explosive (Boss or Regular), we MUST ensure an exact solution is possible with the given hand.
+                // To keep this simple, we will make it so every level is perfectly solvable.
                 // We pick 2-4 pairs of (a, b) that will constitute the HP.
+                
+                const isExplosive = isBoss || (Math.random() < 0.15 && round > 1);
                 
                 let targetHP = 0;
                 let requiredCards = [];
@@ -504,9 +552,9 @@
 
                 return {
                     terms: terms,
-                    hp: Math.floor(targetHP), // Floor it to make it nice integers usually, math logic handles floats
+                    hp: Math.floor(targetHP), 
                     hand: requiredCards,
-                    isExplosive: isBoss || (Math.random() < 0.15 && round > 1), // 15% chance in normal rounds
+                    isExplosive: isExplosive,
                     isBoss: isBoss
                 };
             }
@@ -522,8 +570,8 @@
                 this.levelInRound = 1;
                 this.levelsPerRound = 5;
                 
-                this.score = 0;
-                this.roundScore = 0;
+                this.totalScore = 0; // Cumulative score for records
+                this.roundScore = 0; // Current round score for mechanics
                 this.coins = 0;
                 this.mult = 1.0;
                 
@@ -534,6 +582,9 @@
                 this.maxHP = 0;
                 this.isExplosive = false;
                 this.isBoss = false;
+
+                // Tutorial State
+                this.tutorialStep = 0;
 
                 // UI
                 this.slotA = null;
@@ -592,9 +643,12 @@
                 this.mode = 'tutorial';
                 this.round = 1;
                 this.coins = 0;
+                this.roundScore = 0;
+                this.totalScore = 0;
+                this.tutorialStep = 1;
                 document.getElementById('start-screen').classList.add('hidden');
                 
-                // Hardcoded tutorial level
+                // Tutorial Step 1: Basic Integration
                 this.loadData({
                     terms: [new Term(2, 0)], // f(x) = 2
                     hp: 10,
@@ -602,21 +656,61 @@
                     isExplosive: false,
                     isBoss: false
                 });
-                this.showTutorialMsg("Welcome! Drag '0' to 'a' and '5' to 'b'.");
+                this.showTutorialPopup("Basics", "Welcome! The goal is to defeat the Enemy Function by calculating area.<br><br><b>Drag '0' to 'a' and '5' to 'b'</b> to calculate $\\int_0^5 2 dx$.");
+                this.showTutorialMsg("Tutorial: Basic Integration");
+                this.drawLoop();
+            }
+
+            advanceTutorial() {
+                this.tutorialStep++;
+                
+                if (this.tutorialStep === 2) {
+                    // Tutorial Step 2: Score & Penalties
+                    this.loadData({
+                        terms: [new Term(1, 1)], // f(x) = x
+                        hp: 12, // int_0^4 x dx = 8. int_0^6 = 18.
+                        hand: [0, 4, 0, 6],
+                        isExplosive: false,
+                        isBoss: false
+                    });
+                    this.showTutorialPopup("Scoring Rules", "Every card you use increases your <b>Multiplier</b>. But be careful!<br><br><b>Overkill Penalty:</b> If you deal more damage than HP, you lose score! The penalty is <b>Amplified</b> ($1 + 2\\times\\%_{excess}$) based on how much you miss by.<br><br>Try hitting exactly 12 HP, or get close!");
+                }
+                else if (this.tutorialStep === 3) {
+                    // Step 3: Round End & Shop
+                    this.endRound(); // Show shop
+                    this.showTutorialPopup("Round Complete", "At the end of a round, your <b>Round Score</b> is multiplied by your <b>Card Mult</b> and converted into <b>Coins</b>.<br><br>Your Round Score resets to 0, but you keep your Coins!");
+                }
+                else if (this.tutorialStep === 4) {
+                    // Step 4: Boss
+                    this.round = 3; // Simulate boss round
+                    const bossData = LevelGenerator.generate(3, true); // Force boss
+                    this.loadData(bossData);
+                    document.getElementById('shop-screen').classList.add('hidden');
+                    this.showTutorialPopup("BOSS BATTLE", "This is an <b>Explosive Boss</b>.<br><br>You <b>MUST</b> hit 0 HP exactly. If you overkill an Explosive Boss, the run ends immediately.<br><br>Calculate carefully!");
+                    this.showTutorialMsg("Tutorial: Explosive Boss");
+                }
+                else if (this.tutorialStep === 5) {
+                    // Step 5: Finish
+                    this.showTutorialPopup("Tutorial Complete", "You survived! You are now ready for the real challenge.<br><br>Good luck!");
+                    setTimeout(() => {
+                        this.showTutorialMsg("");
+                        document.getElementById('start-screen').classList.remove('hidden');
+                    }, 4000);
+                }
             }
 
             startRun() {
                 this.mode = 'run';
                 this.round = 1;
                 this.coins = 0;
-                this.score = 0;
+                this.totalScore = 0;
                 this.startRound();
                 document.getElementById('start-screen').classList.add('hidden');
                 this.drawLoop();
             }
 
             startRound() {
-                this.roundScore = 0;
+                this.roundScore = 0; // Reset Score for the round
                 this.mult = 1.0;
                 this.levelInRound = 1;
                 this.levelsPerRound = 5 + Math.floor(Math.random() * 4); // 5-8 levels
@@ -631,9 +725,15 @@
                     return;
                 }
 
-                // Is Boss?
-                const isBoss = (this.levelInRound === this.levelsPerRound);
-                const data = LevelGenerator.generate(this.round, isBoss);
+                // Is Boss? Boss rounds are every 3 rounds (3, 6, 9...)
+                // Boss round has ONLY 1 level.
+                const isBossRound = (this.round % 3 === 0);
+                if (isBossRound) {
+                    // If it is a boss round, overwrite levelsPerRound to 1 so we only do 1 level
+                    this.levelsPerRound = 1;
+                }
+
+                const data = LevelGenerator.generate(this.round, isBossRound);
                 this.loadData(data);
             }
 
@@ -675,6 +775,11 @@
             }
 
             endRound() {
+                if (this.mode === 'tutorial' && this.tutorialStep !== 3) {
+                    // Tutorial logic handled in advanceTutorial except for step 3
+                    return;
+                }
+
                 // Calculate Coins
                 const earned = Math.floor(this.roundScore * this.mult / 100);
                 this.coins += earned;
@@ -682,10 +787,24 @@
                 document.getElementById('shop-score').innerText = this.roundScore;
                 document.getElementById('shop-mult').innerText = `x${this.mult.toFixed(1)}`;
                 document.getElementById('shop-earnings').innerText = earned;
+                
+                // Warn about next round
+                const nextIsBoss = ((this.round + 1) % 3 === 0);
+                const warningEl = document.getElementById('next-round-warning');
+                if (nextIsBoss) {
+                    warningEl.classList.remove('hidden');
+                } else {
+                    warningEl.classList.add('hidden');
+                }
+
                 document.getElementById('shop-screen').classList.remove('hidden');
             }
 
             nextRound() {
+                if (this.mode === 'tutorial') {
+                    this.advanceTutorial();
+                    return;
+                }
                 this.round++;
                 document.getElementById('shop-screen').classList.add('hidden');
                 this.startRound();
@@ -804,12 +923,13 @@
                             this.shakeScreen();
                         }
                     } else {
-                        // Normal Overkill Penalty
-                        const pct = overkill / remaining; // 50% overkill = 0.5
-                        const penaltyMult = 1 + (pct * 5); // Steep penalty curve
-                        const deduction = Math.ceil(overkill * penaltyMult * 10);
+                        // Normal Overkill Penalty: Amplified
+                        // Formula: penaltyMult = 1 + (pct * 2) (More forgiving than *5)
+                        const pct = overkill / remaining; 
+                        const penaltyMult = 1 + (pct * 2); 
+                        const deduction = Math.ceil(overkill * penaltyMult * 5); // Base scale 5
                         scoreChange = -deduction;
-                        logMsg = `<span class="text-amber-500 font-bold">OVERKILL!</span> Score -${deduction}`;
+                        logMsg = `<span class="text-amber-500 font-bold">OVERKILL!</span> Score <span class="text-rose-500">-${deduction}</span>`;
                         this.shakeScreen();
                     }
                 } else if (Math.abs(overkill) < 0.01) {
@@ -824,14 +944,18 @@
                 }
 
                 this.enemyHP -= damage;
+
+                // Update Score (Prevent negative total round score if desired, or allow it. Usually min 0 is safer)
                 if (!this.isExplosive || overkill <= 0.01) {
-                    this.roundScore = Math.max(0, this.roundScore + Math.floor(scoreChange));
-                    this.score = this.roundScore;
+                    this.roundScore += Math.floor(scoreChange);
+                    if (this.roundScore < 0) this.roundScore = 0; // Prevent debt
+                    
+                    if (scoreChange > 0) this.totalScore += Math.floor(scoreChange);
                 }
 
                 // VFX
                 const particle = document.createElement('div');
-                particle.className = 'particle text-6xl font-bold text-white fixed z-50 drop-shadow-lg';
+                particle.className = 'particle text-6xl font-bold fixed z-50 drop-shadow-lg';
                 particle.style.left = '50%'; particle.style.top = '40%';
                 particle.innerText = scoreChange > 0 ? `+${scoreChange}` : `${scoreChange}`;
                 particle.classList.add(scoreChange > 0 ? 'text-emerald-400' : 'text-rose-500');
@@ -845,8 +969,7 @@
                 // Check Level End
                 if (this.enemyHP <= 0.01) {
                     if (this.mode === 'tutorial') {
-                         this.showTutorialMsg("Tutorial Complete! Starting Main Game...");
-                         setTimeout(() => this.startRun(), 2000);
+                        setTimeout(() => this.advanceTutorial(), 1500);
                     } else {
                         setTimeout(() => {
                             this.levelInRound++;
@@ -863,7 +986,8 @@
             // --- UI HELPERS ---
 
             updateGlobalUI() {
-                document.getElementById('score-display').innerText = this.score;
+                // Display Round Score instead of Total Score
+                document.getElementById('score-display').innerText = this.roundScore;
                 document.getElementById('coins-display').innerText = this.coins;
                 document.getElementById('mult-display').innerText = this.mult.toFixed(1);
                 document.getElementById('round-display').innerText = this.round;
@@ -889,6 +1013,13 @@
                     el.innerHTML = `<div class="text-xs text-slate-400 font-bold absolute top-1 left-2">${card.value}</div><div class="text-4xl font-bold text-slate-800">${card.value}</div><div class="text-xs text-slate-400 font-bold absolute bottom-1 right-2">${card.value}</div>`;
                     c.appendChild(el);
                 });
+            }
+
+            showTutorialPopup(title, body) {
+                const modal = document.getElementById('tutorial-modal');
+                document.getElementById('tutorial-title').innerText = title;
+                document.getElementById('tutorial-body').innerHTML = body;
+                modal.classList.remove('hidden');
             }
 
             toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); }
@@ -935,7 +1066,7 @@
                 const originX = w / 2 + this.pan.x;
                 const originY = h / 2 + this.pan.y;
 
-                // Draw Grid
+                // Grid
                 ctx.strokeStyle = "#1e293b";
                 ctx.lineWidth = 1;
 
