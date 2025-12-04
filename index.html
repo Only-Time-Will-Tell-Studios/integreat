@@ -90,6 +90,29 @@
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
 
+        /* Explosion Animation */
+        .explode-anim { animation: explode 0.8s ease-in-out forwards; }
+        @keyframes explode {
+            0% { transform: scale(1); filter: brightness(1); }
+            40% { transform: scale(0.8); filter: brightness(0.5) hue-rotate(90deg); }
+            100% { transform: scale(3); opacity: 0; filter: brightness(10) blur(10px); }
+        }
+
+        /* Screen Flashes */
+        .flash-red { animation: flashRed 0.5s ease-out forwards; }
+        @keyframes flashRed {
+            0% { box-shadow: inset 0 0 0 0 rgba(244, 63, 94, 0); }
+            10% { box-shadow: inset 0 0 100px 50px rgba(244, 63, 94, 0.5); }
+            100% { box-shadow: inset 0 0 0 0 rgba(244, 63, 94, 0); }
+        }
+
+        .flash-green { animation: flashGreen 0.5s ease-out forwards; }
+        @keyframes flashGreen {
+            0% { box-shadow: inset 0 0 0 0 rgba(52, 211, 153, 0); }
+            10% { box-shadow: inset 0 0 100px 50px rgba(52, 211, 153, 0.5); }
+            100% { box-shadow: inset 0 0 0 0 rgba(52, 211, 153, 0); }
+        }
+
         /* CRT Scanline Effect */
         .crt::before {
             content: " ";
@@ -118,8 +141,10 @@
 <body>
 
     <div id="app-scaler" class="crt">
+        <!-- Overlay container for flashes -->
+        <div id="flash-overlay" class="absolute inset-0 pointer-events-none z-[60]"></div>
 
-        <div class="flex flex-col">
+        <div class="flex flex-col h-full w-full" id="game-wrapper">
             <!-- TOP HUD -->
             <div class="h-24 flex justify-between items-center bg-slate-900/90 px-8 border-b border-slate-700 relative z-20 shadow-lg">
                 <div class="flex flex-col">
@@ -141,9 +166,11 @@
                     </div>
 
                     <!-- Score -->
-                    <div class="flex flex-col items-center min-w-[100px] bg-slate-800/50 p-2 rounded border border-slate-700">
+                    <div class="flex flex-col items-center min-w-[100px] bg-slate-800/50 p-2 rounded border border-slate-700 relative">
                         <div class="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Round Score</div>
                         <div id="score-display" class="text-2xl font-bold text-emerald-300">0</div>
+                        <!-- Score VFX Anchor -->
+                        <div id="score-vfx-anchor" class="absolute top-0 right-0 w-0 h-0"></div>
                     </div>
 
                     <!-- Multiplier -->
@@ -299,6 +326,7 @@
             </div>
 
         </div>
+    
 
         <!-- SCREENS & MODALS -->
 
@@ -367,19 +395,22 @@
                 <h2 class="text-4xl font-bold text-white mb-2 relative z-10">ROUND COMPLETE</h2>
                 <div class="w-24 h-1 bg-sky-500 mx-auto mb-8 rounded-full relative z-10"></div>
 
-                <div class="grid grid-cols-3 gap-4 mb-8 relative z-10">
-                    <div class="bg-slate-800 p-4 rounded-xl">
-                        <div class="text-xs text-slate-400 uppercase tracking-widest">Base Score</div>
-                        <div class="text-2xl font-bold text-white" id="shop-score">0</div>
+                <!-- Calculation Animation Container -->
+                <div class="relative z-10 mb-8 font-mono text-xl space-y-4">
+                    <div class="flex items-center justify-center gap-4">
+                        <div class="text-slate-400">SCORE:</div>
+                        <div class="text-white font-bold text-3xl" id="anim-score">0</div>
                     </div>
-                    <div class="bg-slate-800 p-4 rounded-xl">
-                        <div class="text-xs text-slate-400 uppercase tracking-widest">Card Mult</div>
-                        <div class="text-2xl font-bold text-amber-400" id="shop-mult">x1.0</div>
+                    <div class="flex items-center justify-center gap-4">
+                        <div class="text-slate-400">MULT:</div>
+                        <div class="text-amber-400 font-bold text-3xl" id="anim-mult">x1.0</div>
                     </div>
-                    <div class="bg-slate-800 p-4 rounded-xl border border-yellow-500/30 bg-yellow-900/10">
-                        <div class="text-xs text-yellow-500 uppercase tracking-widest">Earnings</div>
-                        <div class="text-3xl font-bold text-yellow-400 flex justify-center items-center gap-2">
-                            <i data-lucide="coins" class="w-5 h-5"></i> <span id="shop-earnings">0</span>
+                    <div class="w-1/2 mx-auto border-b border-slate-600"></div>
+                    <div class="flex items-center justify-center gap-4">
+                        <div class="text-yellow-500">COINS EARNED:</div>
+                        <div class="text-yellow-400 font-bold text-4xl flex items-center gap-2">
+                            <i data-lucide="coins" class="w-6 h-6"></i>
+                            <span id="anim-coins">0</span>
                         </div>
                     </div>
                 </div>
@@ -451,6 +482,32 @@
         // Init Icons
         lucide.createIcons();
 
+        // --- HELPER ANIMATIONS ---
+        function spawnFloatingText(text, x, y, colorClass, delay = 0) {
+            setTimeout(() => {
+                const el = document.createElement('div');
+                el.className = `particle text-4xl font-bold fixed z-50 drop-shadow-lg ${colorClass}`;
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+                el.innerHTML = text;
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 1500);
+            }, delay);
+        }
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
         // --- MATH ENGINE ---
         
         // Helper to convert float to fraction string (e.g. 0.333 -> 1/3)
@@ -495,13 +552,19 @@
 
         // --- LEVEL GENERATION ---
         class LevelGenerator {
-            static generate(round, isBoss) {
+            static generate(round, isBoss, bossTypes = []) {
                 // Difficulty Scaling
-                // Round 1-2: Linear
-                // Round 3-5: Quadratic
-                // Round 6+: Cubic
+                // Round 1: Range [Round, Round+1]
+                // Round 2+: Range [Round-1, Round+1]
+                // Boss: Difficulty = Round
                 
-                const difficulty = isBoss ? round + 2 : round;
+                let diffMin = round - 1;
+                let diffMax = round + 1;
+                if (round === 1) { diffMin = 1; diffMax = 2; }
+                
+                let difficulty = isBoss ? round : Math.floor(Math.random() * (diffMax - diffMin + 1)) + diffMin;
+                difficulty = Math.max(1, difficulty); // ensure at least 1
+
                 let terms = [];
                 
                 if (difficulty <= 2) {
@@ -518,6 +581,10 @@
                     terms.push(new Term(Math.floor(Math.random()*3), 1));
                 }
 
+                // Filtering empty terms (fixing user bug mention)
+                terms = terms.filter(t => t.coeff !== 0);
+                if (terms.length === 0) terms.push(new Term(1, 0));
+
                 const func = new Polynomial(terms);
                 const anti = func.integrate();
 
@@ -525,12 +592,16 @@
                 // If it is Explosive (Boss or Regular), we MUST ensure an exact solution is possible with the given hand.
                 // To keep this simple, we will make it so every level is perfectly solvable.
                 // We pick 2-4 pairs of (a, b) that will constitute the HP.
-                
-                const isExplosive = isBoss || (Math.random() < 0.15 && round > 1);
+
+                // Check if explosive type
+                const isExplosive = (isBoss && bossTypes.includes('explosive')) || (!isBoss && Math.random() < 0.15 && round > 1);
                 
                 let targetHP = 0;
                 let requiredCards = [];
-                const numPairs = isBoss ? 2 + Math.floor(Math.random() * 2) : 2 + Math.floor(Math.random() * 2);
+                
+                // Pairs scale with difficulty
+                // Base 2 pairs. +1 for every 3 difficulty levels.
+                const numPairs = 2 + Math.floor(difficulty / 3);
 
                 for(let i=0; i<numPairs; i++) {
                     const a = Math.floor(Math.random() * 5); // 0-4
@@ -544,17 +615,21 @@
                 }
 
                 // Add Junk
-                const junkCount = isBoss ? 2 : 4;
+                // Junk scales with difficulty. Min 0.
+                const junkCount = Math.max(0, Math.floor(Math.random() * 3) + (difficulty > 3 ? 2 : 0));
+                
                 for(let i=0; i<junkCount; i++) requiredCards.push(Math.floor(Math.random() * 8));
                 
                 requiredCards.sort(() => Math.random() - 0.5);
 
                 return {
                     terms: terms,
-                    hp: Math.floor(targetHP), 
+                    hp: targetHP, // Keep precise float for internal logic
                     hand: requiredCards,
                     isExplosive: isExplosive,
-                    isBoss: isBoss
+                    isBoss: isBoss,
+                    bossTypes: isBoss ? bossTypes : [],
+                    difficulty: difficulty
                 };
             }
         }
@@ -571,6 +646,7 @@
                 
                 this.totalScore = 0; // Cumulative score for records
                 this.roundScore = 0; // Current round score for mechanics
+                this.displayRoundScore = 0; // For rolling counter
                 this.coins = 0;
                 this.mult = 1.0;
                 
@@ -579,8 +655,10 @@
                 this.currentAntideriv = null; 
                 this.enemyHP = 0;
                 this.maxHP = 0;
+                this.difficulty = 1;
                 this.isExplosive = false;
                 this.isBoss = false;
+                this.currentBossTypes = [];
 
                 // Tutorial State
                 this.tutorialStep = 0;
@@ -645,6 +723,7 @@
                 this.levelsPerRound = 2;
                 this.coins = 0;
                 this.roundScore = 0;
+                this.displayRoundScore = 0;
                 this.totalScore = 0;
                 this.tutorialStep = 1;
                 document.getElementById('start-screen').classList.add('hidden');
@@ -655,14 +734,15 @@
                     hp: 10,
                     hand: [0, 5, 2, 3, 4],
                     isExplosive: false,
-                    isBoss: false
+                    isBoss: false,
+                    difficulty: 1
                 });
-                this.showTutorialPopup("Basics", "Welcome! The goal is to defeat the Enemy Function by calculating area.<br><br><b>Drag '0' to 'a' and '5' to 'b'</b> to calculate $\\int_0^5 2 dx$.");
+                this.showTutorialPopup("Basics", "Welcome! The goal is to defeat the Enemy Function by calculating area.<br><br><b>Drag '0' to 'a' and '5' to 'b'</b> to calculate $\\int_0^5 2 dx$.<br><br>You can <b>Pan</b> the graph by dragging and <b>Zoom</b> with your scroll wheel.");
                 this.showTutorialMsg("Tutorial: Basic Integration");
                 this.drawLoop();
             }
 
-            advanceTutorial() { // This is called when an enemy is killed and when nextRound() is called
+            advanceTutorial() { 
                 this.tutorialStep++;
                 
                 if (this.tutorialStep === 2) {
@@ -673,19 +753,21 @@
                         hp: 12, // int_0^4 x dx = 8. int_0^6 = 18. forces an overkill of at least 6
                         hand: [0, 4, 0, 6],
                         isExplosive: false,
-                        isBoss: false
+                        isBoss: false,
+                        difficulty: 1
                     });
-                    this.showTutorialPopup("Scoring Rules", "Every card you use increases your <b>Multiplier</b>. But be careful!<br><br><b>Overkill Penalty:</b> If you deal more damage than HP, you lose score! The penalty is <b>Amplified</b> ($1 + 2\\times\\%_{excess}$) based on how much you miss by.<br><br>Try hitting exactly 12 HP, or get close!");
+                    this.showTutorialPopup("Scoring Rules", "Every card you use increases your <b>Multiplier</b> by +0.1.<br><br><b>Overkill Penalty:</b> If you deal more damage than HP, you lose score! The penalty is <b>Amplified</b> ($1 + 2\\times\\%_{excess}$) based on how much you miss by.<br><br><b>Perfect Kill:</b> Hit 0 HP exactly for a bonus ($1 \\times MaxHP$).");
                 }
                 else if (this.tutorialStep === 3) {
                     // Step 3: Round End & Shop
                     this.endRound(); // Show shop
-                    this.showTutorialPopup("Round Complete", "At the end of a round, your <b>Round Score</b> is multiplied by your <b>Card Mult</b> and converted into <b>Coins</b>.<br><br>Your Round Score resets to 0, but you keep your Coins!");
+                    this.showTutorialPopup("Round Complete", "At the end of a round, your <b>Round Score</b> is multiplied by your <b>Card Mult</b> and divided by 100 to calculate <b>Coins</b> ($\\frac{Score \\times Mult}{100}$).<br><br>Coins can be spent on upgrades in the Shop!");
                 }
                 else if (this.tutorialStep === 4) {
                     // Step 4: Boss
                     this.round = 2; // Simulate boss round
-                    const bossData = LevelGenerator.generate(3, true); // Force boss
+                    this.levelInRound = 1; // Boss levels reset numbering usually, or just visually
+                    const bossData = LevelGenerator.generate(3, true, ['explosive']); 
                     this.loadData(bossData);
                     document.getElementById('shop-screen').classList.add('hidden');
                     this.showTutorialPopup("BOSS BATTLE", "This is an <b>Explosive Boss</b>.<br><br>You <b>MUST</b> hit 0 HP exactly. If you overkill an Explosive Boss, the run ends immediately.<br><br>Calculate carefully!");
@@ -713,6 +795,7 @@
 
             startRound() {
                 this.roundScore = 0; // Reset Score for the round
+                this.displayRoundScore = 0;
                 this.mult = 1.0;
                 this.levelInRound = 1;
                 this.levelsPerRound = 5 + Math.floor(Math.random() * 4); // 5-8 levels
@@ -731,11 +814,13 @@
                 // Boss round has ONLY 1 level.
                 const isBossRound = (this.round % 3 === 0);
                 if (isBossRound) {
-                    // If it is a boss round, overwrite levelsPerRound to 1 so we only do 1 level
                     this.levelsPerRound = 1;
                 }
+                
+                // Add explosive type to boss
+                const bossTypes = ['explosive'];
 
-                const data = LevelGenerator.generate(this.round, isBossRound);
+                const data = LevelGenerator.generate(this.round, isBossRound, bossTypes);
                 this.loadData(data);
             }
 
@@ -746,6 +831,8 @@
                 this.enemyHP = data.hp;
                 this.isExplosive = data.isExplosive;
                 this.isBoss = data.isBoss;
+                this.currentBossTypes = data.bossTypes || [];
+                this.difficulty = data.difficulty;
                 this.hand = data.hand.map(v => ({ id: Math.random().toString(36), value: v }));
 
                 // UI Reset
@@ -776,19 +863,35 @@
                 this.renderGraph();
             }
 
+            animateRoundEnd() {
+                const scoreEl = document.getElementById('shop-score');
+                const multEl = document.getElementById('shop-mult');
+                const coinsEl = document.getElementById('shop-coins-earned') || document.getElementById('shop-earnings'); // Fixing potential ID mismatch
+                
+                // Initial State
+                scoreEl.innerText = '0';
+                multEl.innerText = 'x1.0';
+                coinsEl.innerText = '0';
+
+                // Sequence
+                setTimeout(() => animateValue(scoreEl, 0, this.roundScore, 1000), 100);
+                setTimeout(() => animateValue(multEl, 1, this.mult, 1000), 100); // Visual approximation
+                multEl.innerText = `x${this.mult.toFixed(1)}`; // Ensure final is float
+                
+                const earned = Math.floor(this.roundScore * this.mult / 100);
+                setTimeout(() => animateValue(coinsEl, 0, earned, 1500), 1200);
+
+                this.coins += earned;
+            }
+
             endRound() {
                 if (this.mode === 'tutorial' && this.tutorialStep !== 3) {
-                    // Tutorial logic handled in advanceTutorial except for step 3
                     return;
                 }
 
-                // Calculate Coins
-                const earned = Math.floor(this.roundScore * this.mult / 100);
-                this.coins += earned;
+                document.getElementById('shop-screen').classList.remove('hidden');
                 
-                document.getElementById('shop-score').innerText = this.roundScore;
-                document.getElementById('shop-mult').innerText = `x${this.mult.toFixed(1)}`;
-                document.getElementById('shop-earnings').innerText = earned;
+                this.animateRoundEnd();
                 
                 // Warn about next round
                 const nextIsBoss = ((this.round + 1) % 3 === 0);
@@ -798,8 +901,6 @@
                 } else {
                     warningEl.classList.add('hidden');
                 }
-
-                document.getElementById('shop-screen').classList.remove('hidden');
             }
 
             nextRound() {
@@ -903,7 +1004,7 @@
                 this.updateSlotUI();
                 
                 // Increase Mult
-                this.mult += 0.2; // +0.1 per card used (2 cards)
+                this.mult += 0.1; // +0.1 per card used (Tutorial req)
 
                 // Check Overkill
                 const remaining = this.enemyHP;
@@ -911,66 +1012,93 @@
                 
                 let scoreChange = 0;
                 let logMsg = "";
+                let isPerfectKill = false;
+                let isOverkill = false;
+
+                // 1. Damage VFX (Orange) - Immediate
+                const w = window.innerWidth; const h = window.innerHeight;
+                spawnFloatingText(`-${damage.toFixed(1)}`, w/2, h/2 - 50, 'text-orange-400');
+                this.shakeScreen(15, 200);
 
                 if (overkill > 0.01) {
                     // Overkill Logic
+                    isOverkill = true;
+                    
                     if (this.isExplosive) {
-                        if (this.isBoss) {
-                            this.triggerGameOver("EXPLOSIVE BOSS TRIGGERED");
-                            return;
-                        } else {
-                            // Regular Explosive Penalty
-                            this.roundScore = 0;
-                            logMsg = `<span class="text-rose-500 font-bold">EXPLOSION! Round Score Reset!</span>`;
-                            this.shakeScreen();
-                        }
+                        // Handled in Explosion Sequence below
+                        scoreChange = 0; // Will be reset logic
                     } else {
-                        // Normal Overkill Penalty: Amplified
-                        // Formula: penaltyMult = 1 + (pct * 2) (More forgiving than *5)
-                        const pct = overkill / remaining; 
-                        const penaltyMult = 1 + (pct * 2); 
-                        const deduction = Math.ceil(overkill * penaltyMult * 5); // Base scale 5
+                        // Normal Overkill Penalty
+                        // Formula: (overkill / maxHP) * (difficulty/2)
+                        const pct = overkill / this.maxHP; 
+                        const difficultyFactor = Math.max(1, this.difficulty / 2);
+                        const penaltyMult = 1 + (pct * difficultyFactor); 
+                        const deduction = Math.ceil(overkill * penaltyMult * 5); 
                         scoreChange = -deduction;
-                        logMsg = `<span class="text-amber-500 font-bold">OVERKILL!</span> Score <span class="text-rose-500">-${deduction}</span>`;
-                        this.shakeScreen();
+                        logMsg = `<span class="text-amber-500 font-bold">OVERKILL!</span>`;
+                        
+                        // Screen Flash Red
+                        const overlay = document.getElementById('flash-overlay');
+                        overlay.classList.add('flash-red');
+                        setTimeout(() => overlay.classList.remove('flash-red'), 500);
+                        
+                        spawnFloatingText("OVERKILL!", w/2, h/2 - 100, 'text-rose-500 font-black', 100);
                     }
                 } else if (Math.abs(overkill) < 0.01) {
                     // Perfect Kill
-                    const bonus = Math.floor(this.maxHP * 0.5);
+                    isPerfectKill = true;
+                    const bonus = Math.floor(this.maxHP * 1 * Math.max(1, this.difficulty)); // Bonus = MaxHP * Difficulty
                     scoreChange = intDamage + bonus;
-                    logMsg = `<span class="text-emerald-400 font-bold">PERFECT KILL!</span> +${scoreChange}`;
+                    logMsg = `<span class="text-emerald-400 font-bold">PERFECT KILL!</span>`;
+
+                    // Screen Flash Green
+                    const overlay = document.getElementById('flash-overlay');
+                    overlay.classList.add('flash-green');
+                    setTimeout(() => overlay.classList.remove('flash-green'), 500);
+
+                    spawnFloatingText("PERFECT KILL!", w/2, h/2 - 100, 'text-emerald-400 font-black', 100);
+                    
+                    // Bonus Text
+                    spawnFloatingText(`+${bonus} Bonus`, w/2 + 100, h/2, 'text-emerald-200', 400);
                 } else {
                     // Normal Hit
                     scoreChange = intDamage;
                     logMsg = `<span class="text-sky-400 font-bold">HIT!</span> ${damage.toFixed(1)} Damage`;
                 }
 
-                this.enemyHP -= damage;
+                // Update Logic with Animations
+                const oldRoundScore = this.roundScore;
 
-                // Update Score (Prevent negative total round score if desired, or allow it. Usually min 0 is safer)
-                if (!this.isExplosive || overkill <= 0.01) {
+                if (!this.isExplosive || !isOverkill) {
+                    // Apply Score Logic
                     this.roundScore += Math.floor(scoreChange);
-                    if (this.roundScore < 0) this.roundScore = 0; // Prevent debt
-                    
+                    if (this.roundScore < 0) this.roundScore = 0;
                     if (scoreChange > 0) this.totalScore += Math.floor(scoreChange);
+                    
+                    // 2. Score VFX - Delayed
+                    const scoreText = scoreChange >= 0 ? `+${scoreChange}` : `${scoreChange}`;
+                    const scoreColor = scoreChange >= 0 ? 'text-emerald-400' : 'text-rose-500';
+                    const scoreAnchor = document.getElementById('score-vfx-anchor').getBoundingClientRect();
+                    spawnFloatingText(scoreText, scoreAnchor.left - 50, scoreAnchor.top + 20, scoreColor, 600);
                 }
 
-                // VFX
-                const particle = document.createElement('div');
-                particle.className = 'particle text-6xl font-bold fixed z-50 drop-shadow-lg';
-                particle.style.left = '50%'; particle.style.top = '40%';
-                particle.innerText = scoreChange > 0 ? `+${scoreChange}` : `${scoreChange}`;
-                particle.classList.add(scoreChange > 0 ? 'text-emerald-400' : 'text-rose-500');
-                document.body.appendChild(particle);
-                setTimeout(() => particle.remove(), 1500);
-
                 document.getElementById('message-log').innerHTML = logMsg;
-                this.updateGlobalUI();
+
+                // Handle HP Logic & Explosion
+                this.enemyHP -= damage;
+
+                if (this.isExplosive && isOverkill) {
+                    this.triggerExplosion();
+                    return; // Stop flow to handle explosion
+                }
+
+                this.updateGlobalUI(); // Triggers rolling counter
                 this.updateHPUI();
 
                 // Check Level End
                 if (this.enemyHP <= 0.01) {
-                    if (this.mode === 'tutorial') {
+                     // Dead
+                     if (this.mode === 'tutorial') {
                         setTimeout(() => this.advanceTutorial(), 1500);
                     } else {
                         setTimeout(() => {
@@ -978,18 +1106,54 @@
                             this.nextLevel();
                         }, 1200);
                     }
-                } else {
-                    if (this.hand.length < 2) {
-                        this.triggerGameOver("Ran out of cards");
-                    }
+                } else if (this.hand.length < 2 && this.enemyHP > 0.01) {
+                     this.triggerGameOver("Ran out of cards");
                 }
+            }
+
+            triggerExplosion() {
+                // 1. Show Negative HP
+                this.updateHPUI(true); // true = allow negative
+                
+                // 2. Animation Sequence
+                setTimeout(() => {
+                    const canvas = document.getElementById('graph-canvas');
+                    canvas.parentElement.classList.add('explode-anim');
+                    
+                    // Prolonged Shake
+                    this.shakeScreen(50, 1500);
+
+                    // 3. Logic After Boom
+                    setTimeout(() => {
+                        canvas.parentElement.classList.remove('explode-anim');
+                        
+                        if (this.isBoss && this.currentBossTypes.includes('explosive')) {
+                            this.triggerGameOver("EXPLOSIVE BOSS DETONATED");
+                        } else {
+                            // Regular Explosive Fail
+                            this.roundScore = 0;
+                            this.updateGlobalUI();
+                            spawnFloatingText("SCORE RESET", window.innerWidth/2, window.innerHeight/2, 'text-rose-500 font-black', 0);
+                            
+                            // Move to next level anyway? Or retry? Usually roguelikes punish but let continue if not run-ending.
+                            // Let's clear the level as "failed but survived"
+                            this.levelInRound++;
+                            this.nextLevel();
+                        }
+                    }, 800);
+                }, 500);
             }
 
             // --- UI HELPERS ---
 
             updateGlobalUI() {
-                // Display Round Score
-                document.getElementById('score-display').innerText = this.roundScore;
+                // Rolling Counter for Score
+                const scoreEl = document.getElementById('score-display');
+                if (this.displayRoundScore !== this.roundScore) {
+                    animateValue(scoreEl, this.displayRoundScore, this.roundScore, 1000);
+                    this.displayRoundScore = this.roundScore;
+                }
+                
                 document.getElementById('coins-display').innerText = this.coins;
                 document.getElementById('mult-display').innerText = this.mult.toFixed(1);
                 document.getElementById('round-display').innerText = this.round;
@@ -1006,10 +1170,36 @@
                 document.getElementById('hand-count').innerText = this.hand.length;
             }
 
-            updateHPUI() {
-                const pct = Math.max(0, (this.enemyHP / this.maxHP) * 100);
-                document.getElementById('hp-bar').style.width = `${pct}%`;
-                document.getElementById('hp-text').innerText = `${Math.ceil(Math.max(0, this.enemyHP))}/${this.maxHP}`;
+            updateHPUI(allowNegative = false) {
+                const hpText = document.getElementById('hp-text');
+                const hpBar = document.getElementById('hp-bar');
+                
+                // Text Display: Use fraction if not integer
+                let displayHP = this.enemyHP;
+                if (!Number.isInteger(displayHP)) {
+                    // Check if it's close to int
+                    if (Math.abs(Math.round(displayHP) - displayHP) < 0.001) {
+                         displayHP = Math.round(displayHP);
+                    } else {
+                         displayHP = floatToFraction(displayHP);
+                    }
+                } else {
+                    displayHP = Math.ceil(displayHP); // Safety
+                }
+                
+                // Allow negative text?
+                if (!allowNegative && typeof displayHP === 'number' && displayHP < 0) displayHP = 0;
+                
+                hpText.innerText = `${displayHP}/${this.maxHP}`;
+
+                // Bar Width
+                let pct = (this.enemyHP / this.maxHP) * 100;
+                if (!allowNegative) pct = Math.max(0, pct);
+                // If negative allowed for visual (e.g. explosion preparation), allow bar to go empty or weird?
+                // Standard logic: Bar goes 0, text goes negative.
+                if (pct < 0) pct = 0; 
+                
+                hpBar.style.width = `${pct}%`;
             }
 
             renderHand() {
@@ -1031,6 +1221,11 @@
                 document.getElementById('tutorial-title').innerText = title;
                 document.getElementById('tutorial-body').innerHTML = body;
                 modal.classList.remove('hidden');
+                
+                // Fix MathJax
+                if (window.MathJax) {
+                    MathJax.typesetPromise([document.getElementById('tutorial-body')]).catch((err) => console.log(err));
+                }
             }
 
             toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); }
@@ -1050,11 +1245,35 @@
                 document.getElementById('final-coins').innerText = this.coins;
             }
 
-            shakeScreen() {
+            shakeScreen(intensity = 5, duration = 500) {
                 const app = document.getElementById('app-scaler');
-                app.classList.remove('shake');
-                void app.offsetWidth;
-                app.classList.add('shake');
+                // Remove existing
+                app.style.animation = 'none';
+                app.offsetHeight; /* trigger reflow */
+                
+                // Define custom keyframes dynamically or just reuse class with inline override logic? 
+                // Using the CSS class 'shake' but modifying duration via style is tricky without var.
+                // Simple approach: Toggle class, but limited control over intensity.
+                // Better: JS manipulation of transform for custom shake.
+                
+                let start = Date.now();
+                
+                const shakeInterval = setInterval(() => {
+                    let now = Date.now();
+                    if (now - start > duration) {
+                        clearInterval(shakeInterval);
+                        app.style.transform = `scale(${this.getScale()})`; // Reset
+                        return;
+                    }
+                    const dx = (Math.random() - 0.5) * intensity;
+                    const dy = (Math.random() - 0.5) * intensity;
+                    const baseScale = this.getScale();
+                    app.style.transform = `scale(${baseScale}) translate(${dx}px, ${dy}px)`;
+                }, 16);
+            }
+
+            getScale() {
+                 return parseFloat(document.getElementById('app-scaler').style.transform.replace('scale(', '').replace(')', '')) || 1;
             }
 
             showTutorialMsg(msg) {
