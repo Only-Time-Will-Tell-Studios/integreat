@@ -61,6 +61,12 @@
             opacity: 0.5;
             transform: scale(0.9);
         }
+        /* Highlight for Hint Powerup */
+        .card.highlight-hint {
+            border-color: #facc15 !important;
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
+            background-color: #fefce8;
+        }
 
         /* Slot Interactions */
         .slot { transition: all 0.2s; }
@@ -135,6 +141,12 @@
         @keyframes slideIn {
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* Floating Anim for Shop */
+        @keyframes floatUpFade {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-30px) scale(1.1); opacity: 0; }
         }
     </style>
 </head>
@@ -245,12 +257,6 @@
                 <!-- RIGHT: INTEGRATION CONSOLE -->
                 <div class="w-[400px] flex flex-col gap-4">
                     
-                    <!-- Deck Info (Always Hidden) -->
-                    <div class="flex justify-between items-center px-2" style="display: none;">
-                        <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Hand Size</div>
-                        <div class="text-xs font-bold text-slate-300"><span id="hand-count">0</span> Cards</div>
-                    </div>
-
                     <!-- Main Console -->
                     <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-xl overflow-hidden flex flex-col relative">
                         <!-- Scanline overlay specific to console -->
@@ -313,16 +319,27 @@
                 </div>
             </div>
 
-            <!-- BOTTOM: HAND -->
-            <div class="h-44 bg-slate-900 border-t border-slate-700 relative z-20 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] overflow-visible">
-                <div class="relative z-10 text-[10px] text-slate-500 px-6 py-2 uppercase tracking-widest font-bold flex justify-between" style="z-index: 1;">
-                    <span>Your Deck</span>
-                    <span class="text-sky-500" id="tutorial-msg"></span>
+            <!-- BOTTOM: HAND & POWERUPS -->
+            <div class="h-44 bg-slate-900 border-t border-slate-700 relative z-20 flex shadow-[0_-10px_40px_rgba(0,0,0,0.5)] overflow-visible">
+                
+                <!-- Hand Side -->
+                <div class="flex-1 flex flex-col min-w-0 border-r border-slate-700">
+                    <div class="relative z-10 text-[10px] text-slate-500 px-6 py-2 uppercase tracking-widest font-bold flex justify-between" style="z-index: 1;">
+                        <span>Your Deck</span>
+                        <span class="text-sky-500" id="tutorial-msg"></span>
+                    </div>
+                    <!-- Cards -->
+                    <div class="relative z-20 flex-1 overflow-x-auto px-6 pt-3 pb-0 flex items-center gap-4" id="hand-container">
+                        <!-- Cards Injected Here -->
+                    </div>
                 </div>
-                <!-- Added pt-5 to fix card hover clipping -->
-                <div class="relative z-20 flex-1 overflow-x-auto px-6 pt-3 pb-0 flex items-center gap-4" id="hand-container">
-                    <!-- Cards Injected Here -->
+
+                <!-- Powerups Side -->
+                <div class="w-32 bg-slate-800 flex flex-col p-2 gap-2" id="powerups-container">
+                    <!-- Buttons Injected Here -->
+                    <div class="text-[10px] text-slate-500 uppercase text-center font-bold tracking-widest mb-1">Items</div>
                 </div>
+
             </div>
 
         </div>
@@ -388,37 +405,71 @@
 
         <!-- SHOP / ROUND END SCREEN -->
         <div id="shop-screen" class="hidden absolute inset-0 bg-slate-950 z-40 flex items-center justify-center">
-            <div class="max-w-2xl w-full p-8 bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl text-center relative overflow-hidden">
+            <div class="max-w-3xl w-full p-8 bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl text-center relative overflow-hidden">
                 <!-- Decorative BG -->
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDQwaDQwVjBIMHY0MHptMjAgMjBWMjBoMjB2MjBIMjB6IiBmaWxsPSIjMWUyOTNiIiBmaWxsLW9wYWNpdHk9IjAuMSIvPjwvZz48L3N2Zz4=')] opacity-20"></div>
 
                 <h2 class="text-4xl font-bold text-white mb-2 relative z-10">ROUND COMPLETE</h2>
                 <div class="w-24 h-1 bg-sky-500 mx-auto mb-8 rounded-full relative z-10"></div>
 
-                <!-- Calculation Animation Container -->
-                <div class="relative z-10 mb-8 font-mono text-xl space-y-4">
-                    <div class="flex items-center justify-center gap-4">
-                        <div class="text-slate-400">SCORE:</div>
-                        <div class="text-white font-bold text-3xl" id="anim-score">0</div>
+                <!-- Score Animation Area -->
+                <div class="relative z-10 mb-8 font-mono text-xl grid grid-cols-3 gap-4" id="shop-anim-area">
+                    <!-- Dynamic Animation will happen here -->
+                    <div class="flex flex-col items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">ROUND SCORE</div>
+                        <div class="text-3xl text-white font-bold" id="shop-score">0</div>
                     </div>
-                    <div class="flex items-center justify-center gap-4">
-                        <div class="text-slate-400">MULT:</div>
-                        <div class="text-amber-400 font-bold text-3xl" id="anim-mult">x1.0</div>
+                    <div class="flex flex-col items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <div class="text-xs text-amber-400 mb-1">MULT</div>
+                        <div class="text-3xl text-amber-300 font-bold" id="shop-mult">x1.0</div>
                     </div>
-                    <div class="w-1/2 mx-auto border-b border-slate-600"></div>
-                    <div class="flex items-center justify-center gap-4">
-                        <div class="text-yellow-500">COINS EARNED:</div>
-                        <div class="text-yellow-400 font-bold text-4xl flex items-center gap-2">
-                            <i data-lucide="coins" class="w-6 h-6"></i>
-                            <span id="anim-coins">0</span>
-                        </div>
+                    <div class="flex flex-col items-center bg-slate-800 p-4 rounded-xl border border-slate-700 relative">
+                        <div class="text-xs text-yellow-500 mb-1">TOTAL COINS</div>
+                        <div class="text-3xl text-yellow-400 font-bold" id="shop-coins">0</div>
+                        <div id="coin-plus-vfx" class="absolute top-1/2 left-full ml-2 text-2xl font-bold text-emerald-400 opacity-0 transform -translate-y-1/2">+0</div>
                     </div>
                 </div>
 
-                <div class="bg-slate-800/50 p-8 rounded-xl border border-dashed border-slate-700 mb-8 relative z-10">
-                    <i data-lucide="store" class="w-12 h-12 text-slate-600 mx-auto mb-2"></i>
-                    <h3 class="text-xl font-bold text-slate-500">Shop Coming Soon</h3>
-                    <p class="text-slate-600 text-sm">Spend your coins on upgrades in future updates.</p>
+                <!-- Shop Items -->
+                <div class="bg-slate-800/80 p-6 rounded-xl border border-dashed border-slate-700 mb-8 relative z-10">
+                    <div class="flex items-center justify-center gap-2 mb-4">
+                        <i data-lucide="shopping-cart" class="w-5 h-5 text-slate-400"></i>
+                        <h3 class="text-lg font-bold text-slate-300 uppercase tracking-widest">Supply Shop</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Trash Can -->
+                        <div class="bg-slate-900 p-4 rounded border border-slate-700 flex justify-between items-center group hover:border-sky-500 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-rose-500/20 transition-colors">
+                                    <i data-lucide="trash-2" class="w-6 h-6"></i>
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-white font-bold">Trash Can</div>
+                                    <div class="text-[10px] text-slate-400 w-32">Remove 1 Junk card from hand.</div>
+                                </div>
+                            </div>
+                            <button onclick="game.buyItem('trash', 2)" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm rounded flex items-center gap-1 transition-colors">
+                                <i data-lucide="coins" class="w-3 h-3"></i> 2
+                            </button>
+                        </div>
+
+                        <!-- Quick Hint -->
+                        <div class="bg-slate-900 p-4 rounded border border-slate-700 flex justify-between items-center group hover:border-sky-500 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-emerald-500/20 transition-colors">
+                                    <i data-lucide="lightbulb" class="w-6 h-6"></i>
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-white font-bold">Quick Hint</div>
+                                    <div class="text-[10px] text-slate-400 w-32">Highlights a perfect pair.</div>
+                                </div>
+                            </div>
+                            <button onclick="game.buyItem('hint', 3)" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm rounded flex items-center gap-1 transition-colors">
+                                <i data-lucide="coins" class="w-3 h-3"></i> 3
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div id="next-round-warning" class="mb-4 text-rose-400 font-bold uppercase tracking-widest animate-pulse hidden relative z-10">
@@ -495,18 +546,25 @@
             }, delay);
         }
 
+        // Returns Promise that resolves when animation done
         function animateValue(obj, start, end, duration) {
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                obj.innerHTML = Math.floor(progress * (end - start) + start);
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
-            };
-            window.requestAnimationFrame(step);
+            return new Promise(resolve => {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    obj.innerHTML = Math.floor(progress * (end - start) + start);
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    } else {
+                        resolve();
+                    }
+                };
+                window.requestAnimationFrame(step);
+            });
         }
+        
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
         // --- MATH ENGINE ---
         
@@ -524,6 +582,28 @@
             
             if (k1 === 1) return `${h1}`; // Integer
             return `(${h1}/${k1})`; // Surround with parentheses
+        }
+
+        // Mixed Number Formatter
+        function toMixed(num) {
+            if (Math.abs(num) < 0.001) return "0";
+            let sign = num < 0 ? "-" : "";
+            num = Math.abs(num);
+            let intPart = Math.floor(num);
+            let decPart = num - intPart;
+            
+            if (decPart < 0.001) return `${sign}${intPart}`;
+            
+            // Float to frac logic for decPart
+            let frac = floatToFraction(decPart); // returns "(n/d)"
+            // Remove parens for mixed number display aesthetic: 1 (1/3) vs 1 1/3
+            // Keeping parens for clarity per user request style preference or standard mixed
+            // User asked for: "1 (1/3)"
+            if (frac.startsWith('(')) {
+                if (intPart === 0) return `${sign}${frac}`;
+                return `${sign}${intPart} ${frac}`;
+            }
+            return `${sign}${num.toFixed(2)}`; // Fallback
         }
 
         class Term {
@@ -553,78 +633,63 @@
         // --- LEVEL GENERATION ---
         class LevelGenerator {
             static generate(round, isBoss, bossTypes = []) {
-                // Difficulty Scaling
-                // Round 1: Range [Round, Round+1]
-                // Round 2+: Range [Round-1, Round+1]
-                // Boss: Difficulty = Round
-                
                 let diffMin = round - 1;
                 let diffMax = round + 1;
                 if (round === 1) { diffMin = 1; diffMax = 2; }
                 
                 let difficulty = isBoss ? round : Math.floor(Math.random() * (diffMax - diffMin + 1)) + diffMin;
-                difficulty = Math.max(1, difficulty); // ensure at least 1
+                difficulty = Math.max(1, difficulty); 
 
                 let terms = [];
                 
+                // Poly Gen
                 if (difficulty <= 2) {
-                    // Linear: mx + b
                     terms.push(new Term(1 + Math.floor(Math.random()*3), 1));
                     if(Math.random() > 0.5) terms.push(new Term(1 + Math.floor(Math.random()*5), 0));
                 } else if (difficulty <= 5) {
-                    // Quadratic
                     terms.push(new Term(1 + Math.floor(Math.random()*2), 2));
                     terms.push(new Term(Math.floor(Math.random()*4), 0));
                 } else {
-                    // Cubic
                     terms.push(new Term(1 + Math.floor(Math.random()*2), 3));
                     terms.push(new Term(Math.floor(Math.random()*3), 1));
                 }
 
-                // Filtering empty terms (fixing user bug mention)
                 terms = terms.filter(t => t.coeff !== 0);
                 if (terms.length === 0) terms.push(new Term(1, 0));
 
                 const func = new Polynomial(terms);
                 const anti = func.integrate();
 
-                // Puzzle Generation:
-                // If it is Explosive (Boss or Regular), we MUST ensure an exact solution is possible with the given hand.
-                // To keep this simple, we will make it so every level is perfectly solvable.
-                // We pick 2-4 pairs of (a, b) that will constitute the HP.
-
-                // Check if explosive type
                 const isExplosive = (isBoss && bossTypes.includes('explosive')) || (!isBoss && Math.random() < 0.15 && round > 1);
                 
                 let targetHP = 0;
                 let requiredCards = [];
                 
-                // Pairs scale with difficulty
-                // Base 2 pairs. +1 for every 3 difficulty levels.
                 const numPairs = 2 + Math.floor(difficulty / 3);
 
                 for(let i=0; i<numPairs; i++) {
-                    const a = Math.floor(Math.random() * 5); // 0-4
-                    const b = a + 1 + Math.floor(Math.random() * 3); // a+1 to a+3
+                    const a = Math.floor(Math.random() * 5); 
+                    const b = a + 1 + Math.floor(Math.random() * 3); 
                     const dmg = anti.evaluate(b) - anti.evaluate(a);
                     
                     if(dmg > 0.1) {
                         targetHP += dmg;
-                        requiredCards.push(a, b);
+                        requiredCards.push({ value: a, isJunk: false });
+                        requiredCards.push({ value: b, isJunk: false });
                     }
                 }
 
-                // Add Junk
-                // Junk scales with difficulty. Min 0.
+                // Junk
                 const junkCount = Math.max(0, Math.floor(Math.random() * 3) + (difficulty > 3 ? 2 : 0));
-                
-                for(let i=0; i<junkCount; i++) requiredCards.push(Math.floor(Math.random() * 8));
+                for(let i=0; i<junkCount; i++) {
+                    requiredCards.push({ value: Math.floor(Math.random() * 8), isJunk: true });
+                }
                 
                 requiredCards.sort(() => Math.random() - 0.5);
 
                 return {
                     terms: terms,
-                    hp: targetHP, // Keep precise float for internal logic
+                    hp: targetHP, 
                     hand: requiredCards,
                     isExplosive: isExplosive,
                     isBoss: isBoss,
@@ -639,14 +704,14 @@
         class Game {
             constructor() {
                 // State
-                this.mode = 'menu'; // menu, tutorial, run
+                this.mode = 'menu'; 
                 this.round = 1;
                 this.levelInRound = 1;
                 this.levelsPerRound = 5;
                 
-                this.totalScore = 0; // Cumulative score for records
-                this.roundScore = 0; // Current round score for mechanics
-                this.displayRoundScore = 0; // For rolling counter
+                this.totalScore = 0; 
+                this.roundScore = 0; 
+                this.displayRoundScore = 0; 
                 this.coins = 0;
                 this.mult = 1.0;
                 
@@ -659,6 +724,13 @@
                 this.isExplosive = false;
                 this.isBoss = false;
                 this.currentBossTypes = [];
+
+                // Inventory
+                this.inventory = {
+                    trash: 0,
+                    hint: 0
+                };
+                this.hintUsedThisLevel = false;
 
                 // Tutorial State
                 this.tutorialStep = 0;
@@ -726,17 +798,19 @@
                 this.displayRoundScore = 0;
                 this.totalScore = 0;
                 this.tutorialStep = 1;
+                this.inventory = { trash: 0, hint: 0 };
                 document.getElementById('start-screen').classList.add('hidden');
                 
-                // Tutorial Step 1: Basic Integration
+                // Tutorial Step 1
                 this.loadData({
-                    terms: [new Term(2, 0)], // f(x) = 2
+                    terms: [new Term(2, 0)], 
                     hp: 10,
-                    hand: [0, 5, 2, 3, 4],
+                    hand: [0, 5, 2, 3, 4], // Treated as raw numbers in loadData but we need to ensure junk logic
                     isExplosive: false,
                     isBoss: false,
                     difficulty: 1
                 });
+                // Manually set junk status for tutorial hands in loadData override or just assume false for manual arrays
                 this.showTutorialPopup("Basics", "Welcome! The goal is to defeat the Enemy Function by calculating area.<br><br><b>Drag '0' to 'a' and '5' to 'b'</b> to calculate $\\int_0^5 2 dx$.<br><br>You can <b>Pan</b> the graph by dragging and <b>Zoom</b> with your scroll wheel.");
                 this.showTutorialMsg("Tutorial: Basic Integration");
                 this.drawLoop();
@@ -746,11 +820,10 @@
                 this.tutorialStep++;
                 
                 if (this.tutorialStep === 2) {
-                    // Tutorial Step 2: Score & Penalties
                     this.levelInRound = 2;
                     this.loadData({
-                        terms: [new Term(1, 1)], // f(x) = x
-                        hp: 12, // int_0^4 x dx = 8. int_0^6 = 18. forces an overkill of at least 6
+                        terms: [new Term(1, 1)], 
+                        hp: 12, 
                         hand: [0, 4, 0, 6],
                         isExplosive: false,
                         isBoss: false,
@@ -759,14 +832,12 @@
                     this.showTutorialPopup("Scoring Rules", "Every card you use increases your <b>Multiplier</b> by +0.1.<br><br><b>Overkill Penalty:</b> If you deal more damage than HP, you lose score! The penalty is <b>Amplified</b> ($1 + 2\\times\\%_{excess}$) based on how much you miss by.<br><br><b>Perfect Kill:</b> Hit 0 HP exactly for a bonus ($1 \\times MaxHP$).");
                 }
                 else if (this.tutorialStep === 3) {
-                    // Step 3: Round End & Shop
-                    this.endRound(); // Show shop
+                    this.endRound(); 
                     this.showTutorialPopup("Round Complete", "At the end of a round, your <b>Round Score</b> is multiplied by your <b>Card Mult</b> and divided by 100 to calculate <b>Coins</b> ($\\frac{Score \\times Mult}{100}$).<br><br>Coins can be spent on upgrades in the Shop!");
                 }
                 else if (this.tutorialStep === 4) {
-                    // Step 4: Boss
-                    this.round = 2; // Simulate boss round
-                    this.levelInRound = 1; // Boss levels reset numbering usually, or just visually
+                    this.round = 2; 
+                    this.levelInRound = 1; 
                     const bossData = LevelGenerator.generate(3, true, ['explosive']); 
                     this.loadData(bossData);
                     document.getElementById('shop-screen').classList.add('hidden');
@@ -774,7 +845,6 @@
                     this.showTutorialMsg("Tutorial: Explosive Boss");
                 }
                 else if (this.tutorialStep === 5) {
-                    // Step 5: Finish
                     this.showTutorialPopup("Tutorial Complete", "You survived! You are now ready for the real challenge.<br><br>Good luck!");
                     setTimeout(() => {
                         this.showTutorialMsg("");
@@ -788,17 +858,18 @@
                 this.round = 1;
                 this.coins = 0;
                 this.totalScore = 0;
+                this.inventory = { trash: 0, hint: 0 };
                 this.startRound();
                 document.getElementById('start-screen').classList.add('hidden');
                 this.drawLoop();
             }
 
             startRound() {
-                this.roundScore = 0; // Reset Score for the round
+                this.roundScore = 0; 
                 this.displayRoundScore = 0;
                 this.mult = 1.0;
                 this.levelInRound = 1;
-                this.levelsPerRound = 5 + Math.floor(Math.random() * 4); // 5-8 levels
+                this.levelsPerRound = 5 + Math.floor(Math.random() * 4); 
                 
                 this.updateGlobalUI();
                 this.nextLevel();
@@ -809,17 +880,10 @@
                     this.endRound();
                     return;
                 }
-
-                // Is Boss? Boss rounds are every 3 rounds (3, 6, 9...)
-                // Boss round has ONLY 1 level.
                 const isBossRound = (this.round % 3 === 0);
-                if (isBossRound) {
-                    this.levelsPerRound = 1;
-                }
+                if (isBossRound) this.levelsPerRound = 1;
                 
-                // Add explosive type to boss
                 const bossTypes = ['explosive'];
-
                 const data = LevelGenerator.generate(this.round, isBossRound, bossTypes);
                 this.loadData(data);
             }
@@ -833,18 +897,22 @@
                 this.isBoss = data.isBoss;
                 this.currentBossTypes = data.bossTypes || [];
                 this.difficulty = data.difficulty;
-                this.hand = data.hand.map(v => ({ id: Math.random().toString(36), value: v }));
+                
+                // Map hand. If raw numbers (tutorial), assume non-junk
+                this.hand = data.hand.map(item => {
+                    const val = typeof item === 'object' ? item.value : item;
+                    const junk = typeof item === 'object' ? item.isJunk : false;
+                    return { id: Math.random().toString(36), value: val, isJunk: junk };
+                });
 
-                // UI Reset
                 this.slotA = null; this.slotB = null;
                 this.updateSlotUI();
                 this.pan = { x: 0, y: 0, zoom: 1 };
+                this.hintUsedThisLevel = false;
                 
-                // Display Update
                 document.getElementById('function-display').innerHTML = `f(x) = ${this.currentFunction.toDisplay()}`;
                 document.getElementById('antideriv-display').innerHTML = this.currentAntideriv.toDisplay();
                 
-                // Visuals
                 const badge = document.getElementById('explosive-badge');
                 const warning = document.getElementById('boss-warning-bg');
                 if (this.isExplosive) {
@@ -860,39 +928,110 @@
                 this.updateGlobalUI();
                 this.updateHPUI();
                 this.renderHand();
+                this.renderPowerups();
                 this.renderGraph();
             }
 
-            animateRoundEnd() {
+            // --- SHOP & ANIMATION ---
+
+            async animateRoundEndSequence() {
                 const scoreEl = document.getElementById('shop-score');
                 const multEl = document.getElementById('shop-mult');
-                const coinsEl = document.getElementById('shop-coins-earned') || document.getElementById('shop-earnings'); // Fixing potential ID mismatch
-                
-                // Initial State
-                scoreEl.innerText = '0';
-                multEl.innerText = 'x1.0';
-                coinsEl.innerText = '0';
+                const coinsEl = document.getElementById('shop-coins');
+                const animArea = document.getElementById('shop-anim-area');
+                const plusVfx = document.getElementById('coin-plus-vfx');
 
-                // Sequence
-                setTimeout(() => animateValue(scoreEl, 0, this.roundScore, 1000), 100);
-                setTimeout(() => animateValue(multEl, 1, this.mult, 1000), 100); // Visual approximation
-                multEl.innerText = `x${this.mult.toFixed(1)}`; // Ensure final is float
+                // 1. Initial State
+                scoreEl.innerHTML = this.roundScore;
+                multEl.innerHTML = `x${this.mult.toFixed(1)}`;
+                coinsEl.innerHTML = this.coins;
+                plusVfx.style.opacity = '0';
                 
-                const earned = Math.floor(this.roundScore * this.mult / 100);
-                setTimeout(() => animateValue(coinsEl, 0, earned, 1500), 1200);
+                // Reset styling on score container from any previous runs
+                scoreEl.parentElement.style.transform = 'none';
+                scoreEl.parentElement.style.zIndex = 'auto';
 
-                this.coins += earned;
+                await sleep(500);
+
+                // 2. Mult pops under Score (Conceptual logic: we make the score count up)
+                const total = Math.floor(this.roundScore * this.mult);
+                
+                // Spawn "x3.6" VFX
+                const rect = scoreEl.getBoundingClientRect();
+                spawnFloatingText(`x${this.mult.toFixed(1)}`, rect.left + rect.width/2, rect.top + 50, 'text-amber-400', 0);
+                
+                // Score Counts up to Total
+                await animateValue(scoreEl, this.roundScore, total, 1500);
+                
+                await sleep(500);
+
+                // 3. Score Pops Out & Big
+                const scoreContainer = scoreEl.parentElement;
+                scoreContainer.style.transition = "transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                scoreContainer.style.transform = "scale(1.2)";
+                scoreContainer.style.zIndex = "50";
+                scoreContainer.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.5)";
+                scoreEl.classList.add("text-sky-400");
+                
+                await sleep(600);
+
+                // 4. Line & 100 appear (Visual division)
+                // We'll append temporary elements
+                const divider = document.createElement('div');
+                divider.className = "w-full h-1 bg-white my-1";
+                const div100 = document.createElement('div');
+                div100.className = "text-center text-slate-300 font-bold";
+                div100.innerText = "100";
+                scoreContainer.appendChild(divider);
+                scoreContainer.appendChild(div100);
+
+                await sleep(800);
+
+                // 5. Fade out divider, count down score to Result
+                divider.style.transition = "opacity 0.5s";
+                div100.style.transition = "opacity 0.5s";
+                divider.style.opacity = "0";
+                div100.style.opacity = "0";
+                
+                const earned = Math.floor(total / 100);
+                await animateValue(scoreEl, total, earned, 1000);
+                scoreEl.classList.remove("text-sky-400");
+                scoreEl.classList.add("text-yellow-400");
+
+                // Cleanup divider
+                divider.remove();
+                div100.remove();
+
+                await sleep(400);
+
+                // 6. Move Result to Coins
+                scoreContainer.style.transform = "scale(1)";
+                scoreContainer.style.boxShadow = "none";
+                scoreContainer.style.zIndex = "auto";
+                
+                // Show "+Earned"
+                plusVfx.innerHTML = `+${earned}`;
+                plusVfx.style.opacity = "1";
+                plusVfx.style.animation = "floatUpFade 1.5s forwards";
+
+                // Count up Coins
+                const newCoins = this.coins + earned;
+                await animateValue(coinsEl, this.coins, newCoins, 1000);
+                
+                this.coins = newCoins;
+                
+                // Reset score display for next logic
+                await sleep(1000);
             }
 
             endRound() {
-                if (this.mode === 'tutorial' && this.tutorialStep !== 3) {
-                    return;
-                }
+                if (this.mode === 'tutorial' && this.tutorialStep !== 3) return;
 
                 document.getElementById('shop-screen').classList.remove('hidden');
                 
-                this.animateRoundEnd();
-                
+                // Trigger Async Animation
+                this.animateRoundEndSequence();
+
                 // Warn about next round
                 const nextIsBoss = ((this.round + 1) % 3 === 0);
                 const warningEl = document.getElementById('next-round-warning');
@@ -911,6 +1050,142 @@
                 this.round++;
                 document.getElementById('shop-screen').classList.add('hidden');
                 this.startRound();
+            }
+
+            // --- ITEMS / SHOP ---
+            buyItem(type, cost) {
+                if (this.coins >= cost) {
+                    this.coins -= cost;
+                    this.inventory[type]++;
+                    
+                    // Update Shop UI
+                    document.getElementById('shop-coins').innerText = this.coins;
+                    
+                    // Spawn particle
+                    const rect = document.getElementById('shop-coins').getBoundingClientRect();
+                    spawnFloatingText(`- ${cost}`, rect.left + 50, rect.top, 'text-rose-400');
+                } else {
+                    // Shake coins
+                    const c = document.getElementById('shop-coins');
+                    c.classList.add('shake');
+                    setTimeout(() => c.classList.remove('shake'), 500);
+                }
+            }
+
+            useTrash() {
+                if (this.inventory.trash <= 0) return;
+                
+                // Logic
+                const junkIdx = this.hand.findIndex(c => c.isJunk);
+                if (junkIdx === -1) {
+                    spawnFloatingText("NO JUNK CARDS!", window.innerWidth/2, window.innerHeight - 200, 'text-slate-400');
+                    return;
+                }
+                
+                // Consume
+                this.inventory.trash--;
+                const removed = this.hand.splice(junkIdx, 1)[0];
+                
+                spawnFloatingText("TRASHED!", window.innerWidth/2, window.innerHeight - 200, 'text-slate-500');
+                
+                this.renderHand();
+                this.renderPowerups();
+            }
+
+            useHint() {
+                if (this.inventory.hint <= 0) return;
+                if (this.hintUsedThisLevel) {
+                    spawnFloatingText("ALREADY USED!", window.innerWidth/2, window.innerHeight - 200, 'text-slate-400');
+                    return;
+                }
+
+                // Logic: Find a pair that deals <= remaining HP, prioritize Exact
+                // Simple: Loop pairs
+                let bestPair = null;
+                
+                for(let i=0; i<this.hand.length; i++) {
+                    for(let j=0; j<this.hand.length; j++) {
+                        if (i === j) continue;
+                        const c1 = this.hand[i];
+                        const c2 = this.hand[j];
+                        
+                        // Try bounds a=c1, b=c2 (must be a < b)
+                        let a = c1.value;
+                        let b = c2.value;
+                        if (a >= b) continue;
+
+                        const dmg = this.currentAntideriv.evaluate(b) - this.currentAntideriv.evaluate(a);
+                        
+                        // Check if it's "safe" (<= remaining HP + epsilon)
+                        if (dmg <= this.enemyHP + 0.1) {
+                            if (!bestPair) bestPair = [c1.id, c2.id];
+                            // Priority: Exact match
+                            if (Math.abs(dmg - this.enemyHP) < 0.1) {
+                                bestPair = [c1.id, c2.id];
+                                break;
+                            }
+                        }
+                    }
+                    if (bestPair && bestPair.exact) break;
+                }
+
+                if (bestPair) {
+                    this.inventory.hint--;
+                    this.hintUsedThisLevel = true;
+                    this.renderPowerups(); // Update count
+                    
+                    // Highlight cards
+                    const cardEls = document.querySelectorAll('.card');
+                    cardEls.forEach(el => {
+                        if (bestPair.includes(el.dataset.id)) {
+                            el.classList.add('highlight-hint');
+                        }
+                    });
+                    
+                    spawnFloatingText("PAIR FOUND!", window.innerWidth/2, window.innerHeight - 200, 'text-yellow-300');
+                } else {
+                    spawnFloatingText("NO SAFE PAIR!", window.innerWidth/2, window.innerHeight - 200, 'text-rose-400');
+                }
+            }
+
+            renderPowerups() {
+                const c = document.getElementById('powerups-container');
+                // Keep header
+                c.innerHTML = '<div class="text-[10px] text-slate-500 uppercase text-center font-bold tracking-widest mb-1">Items</div>';
+                
+                // Trash Can
+                if (this.inventory.trash > 0) {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded p-2 flex items-center justify-between group transition-all relative";
+                    btn.onclick = () => this.useTrash();
+                    btn.title = "Remove 1 Junk Card";
+                    btn.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="trash-2" class="w-4 h-4 text-slate-400 group-hover:text-white"></i>
+                            <span class="text-xs font-bold text-white">Trash</span>
+                        </div>
+                        <span class="text-xs font-bold text-sky-400 bg-slate-900 px-1.5 rounded">${this.inventory.trash}</span>
+                    `;
+                    c.appendChild(btn);
+                }
+
+                // Hint
+                if (this.inventory.hint > 0) {
+                    const btn = document.createElement('button');
+                    btn.className = `w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded p-2 flex items-center justify-between group transition-all relative ${this.hintUsedThisLevel ? 'opacity-50 cursor-not-allowed' : ''}`;
+                    btn.onclick = () => this.useHint();
+                    btn.title = "Highlight Perfect Pair";
+                    btn.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="lightbulb" class="w-4 h-4 text-yellow-500 group-hover:text-yellow-300"></i>
+                            <span class="text-xs font-bold text-white">Hint</span>
+                        </div>
+                        <span class="text-xs font-bold text-sky-400 bg-slate-900 px-1.5 rounded">${this.inventory.hint}</span>
+                    `;
+                    c.appendChild(btn);
+                }
+                
+                lucide.createIcons();
             }
 
             // --- INTERACTIONS ---
@@ -979,7 +1254,8 @@
                         const res = Fb - Fa;
                         
                         if (this.hintsEnabled) {
-                            preview.innerHTML = `<span class="text-sky-400">${Fb.toFixed(1)}</span> - <span class="text-purple-400">${Fa.toFixed(1)}</span> = <span class="text-white font-bold">${res.toFixed(1)}</span>`;
+                            // Use Mixed Numbers for display
+                            preview.innerHTML = `<span class="text-sky-400">${toMixed(Fb)}</span> - <span class="text-purple-400">${toMixed(Fa)}</span> = <span class="text-white font-bold">${toMixed(res)}</span>`;
                         } else {
                             preview.innerHTML = `F(${b}) - F(${a}) = <span class="text-white font-bold">?</span>`;
                         }
@@ -1017,7 +1293,7 @@
 
                 // 1. Damage VFX (Orange) - Immediate
                 const w = window.innerWidth; const h = window.innerHeight;
-                spawnFloatingText(`-${damage.toFixed(1)}`, w/2, h/2 - 50, 'text-orange-400');
+                spawnFloatingText(`-${toMixed(damage)}`, w/2, h/2 - 50, 'text-orange-400');
                 this.shakeScreen(15, 200);
 
                 if (overkill > 0.01) {
@@ -1063,12 +1339,10 @@
                 } else {
                     // Normal Hit
                     scoreChange = intDamage;
-                    logMsg = `<span class="text-sky-400 font-bold">HIT!</span> ${damage.toFixed(1)} Damage`;
+                    logMsg = `<span class="text-sky-400 font-bold">HIT!</span> ${toMixed(damage)} Damage`;
                 }
 
                 // Update Logic with Animations
-                const oldRoundScore = this.roundScore;
-
                 if (!this.isExplosive || !isOverkill) {
                     // Apply Score Logic
                     this.roundScore += Math.floor(scoreChange);
@@ -1096,7 +1370,7 @@
                 this.updateHPUI();
 
                 // Check Level End
-                if (this.enemyHP <= 0.01) {
+                if (this.enemyHP <= 0.01 && !isOverkill) {
                      // Dead
                      if (this.mode === 'tutorial') {
                         setTimeout(() => this.advanceTutorial(), 1500);
@@ -1167,21 +1441,20 @@
                     levelDisplay.innerText = `${this.levelInRound}/${this.levelsPerRound}`;
                     if (levelDisplay.classList.contains('text-rose-500')) { levelDisplay.classList.replace(`text-rose-500`, `text-slate-500`); }
                 }
-                document.getElementById('hand-count').innerText = this.hand.length;
             }
 
             updateHPUI(allowNegative = false) {
                 const hpText = document.getElementById('hp-text');
                 const hpBar = document.getElementById('hp-bar');
                 
-                // Text Display: Use fraction if not integer
+                // Text Display: Use mixed fraction if not integer
                 let displayHP = this.enemyHP;
                 if (!Number.isInteger(displayHP)) {
                     // Check if it's close to int
                     if (Math.abs(Math.round(displayHP) - displayHP) < 0.001) {
                          displayHP = Math.round(displayHP);
                     } else {
-                         displayHP = floatToFraction(displayHP);
+                         displayHP = toMixed(displayHP);
                     }
                 } else {
                     displayHP = Math.ceil(displayHP); // Safety
@@ -1195,8 +1468,6 @@
                 // Bar Width
                 let pct = (this.enemyHP / this.maxHP) * 100;
                 if (!allowNegative) pct = Math.max(0, pct);
-                // If negative allowed for visual (e.g. explosion preparation), allow bar to go empty or weird?
-                // Standard logic: Bar goes 0, text goes negative.
                 if (pct < 0) pct = 0; 
                 
                 hpBar.style.width = `${pct}%`;
@@ -1209,6 +1480,7 @@
                     const el = document.createElement('div');
                     el.className = 'card shrink-0 w-20 h-28 bg-slate-100 rounded-lg shadow-lg flex flex-col items-center justify-center cursor-grab border-2 border-slate-300 relative overflow-y-visible';
                     el.draggable = true;
+                    el.dataset.id = card.id; // Tag for hint finding
                     el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', JSON.stringify(card)); el.classList.add('dragging'); });
                     el.addEventListener('dragend', () => el.classList.remove('dragging'));
                     el.innerHTML = `<div class="text-xs text-slate-400 font-bold absolute top-1 left-2">${card.value}</div><div class="text-4xl font-bold text-slate-800">${card.value}</div><div class="text-xs text-slate-400 font-bold absolute bottom-1 right-2">${card.value}</div>`;
@@ -1247,14 +1519,8 @@
 
             shakeScreen(intensity = 5, duration = 500) {
                 const app = document.getElementById('app-scaler');
-                // Remove existing
                 app.style.animation = 'none';
-                app.offsetHeight; /* trigger reflow */
-                
-                // Define custom keyframes dynamically or just reuse class with inline override logic? 
-                // Using the CSS class 'shake' but modifying duration via style is tricky without var.
-                // Simple approach: Toggle class, but limited control over intensity.
-                // Better: JS manipulation of transform for custom shake.
+                app.offsetHeight; 
                 
                 let start = Date.now();
                 
@@ -1307,20 +1573,13 @@
                 }
 
                 function roundToNiceNumber(value) {
-                    // Get the magnitude (power of 10) of the number
                     const magnitude = Math.floor(Math.log10(value));
                     const powerOf10 = Math.pow(10, magnitude);
-                    // Normalize the value to a number between 1 and 10
                     const normalizedValue = value / powerOf10;
-                    // Determine the nice fractional value (1, 2, or 5)
                     let niceFractional;
-                    if (normalizedValue >= 5) {
-                        niceFractional = 5;
-                    } else if (normalizedValue >= 2) {
-                        niceFractional = 2;
-                    } else {
-                        niceFractional = 1;
-                    }
+                    if (normalizedValue >= 5) niceFractional = 5;
+                    else if (normalizedValue >= 2) niceFractional = 2;
+                    else niceFractional = 1;
                     return niceFractional * powerOf10;
                 }
                 
