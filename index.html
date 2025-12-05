@@ -425,7 +425,10 @@
                     </div>
                     <div class="flex flex-col items-center bg-slate-800 p-4 rounded-xl border border-slate-700 relative">
                         <div class="text-xs text-yellow-500 mb-1">TOTAL COINS</div>
-                        <div class="text-3xl text-yellow-400 font-bold" id="shop-coins">0</div>
+                        <div class="flex items-center text-3xl text-yellow-400 font-bold gap-1">
+                            <i data-lucide="coins" class="w-6 h-6"></i>
+                            <span id="shop-coins">0</span>
+                        </div>
                         <div id="coin-plus-vfx" class="absolute top-1/2 left-full ml-2 text-2xl font-bold text-emerald-400 opacity-0 transform -translate-y-1/2">+0</div>
                     </div>
                 </div>
@@ -462,7 +465,7 @@
                                 </div>
                                 <div class="text-left">
                                     <div class="text-white font-bold">Quick Hint</div>
-                                    <div class="text-[10px] text-slate-400 w-32">Highlights a perfect pair.</div>
+                                    <div class="text-[10px] text-slate-400 w-32">Highlights a perfect pair. Can only be used once per level.</div>
                                 </div>
                             </div>
                             <button onclick="game.buyItem('hint', 3)" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm rounded flex items-center gap-1 transition-colors">
@@ -665,7 +668,7 @@
                 let targetHP = 0;
                 let requiredCards = [];
                 
-                const numPairs = 2 + Math.floor(difficulty / 3);
+                const numPairs = (1 + Math.floor(Math.random() * 2)) + Math.floor(difficulty / 3); // random 1-2 + bonus from difficulty
 
                 for(let i=0; i<numPairs; i++) {
                     const a = Math.floor(Math.random() * 5); 
@@ -683,6 +686,7 @@
                 const junkCount = Math.max(0, Math.floor(Math.random() * 3) + (difficulty > 3 ? 2 : 0));
                 for(let i=0; i<junkCount; i++) {
                     requiredCards.push({ value: Math.floor(Math.random() * 8), isJunk: true });
+                    console.log("Added junk card");
                 }
                 
                 requiredCards.sort(() => Math.random() - 0.5);
@@ -836,6 +840,8 @@
                     this.showTutorialPopup("Round Complete", "At the end of a round, your <b>Round Score</b> is multiplied by your <b>Card Mult</b> and divided by 100 to calculate <b>Coins</b> ($\\frac{Score \\times Mult}{100}$).<br><br>Coins can be spent on upgrades in the Shop!");
                 }
                 else if (this.tutorialStep === 4) {
+                    this.roundScore = 0;
+                    this.mult = 1.0;
                     this.round = 2; 
                     this.levelInRound = 1; 
                     const bossData = LevelGenerator.generate(3, true, ['explosive']); 
@@ -849,6 +855,8 @@
                     setTimeout(() => {
                         this.showTutorialMsg("");
                         document.getElementById('start-screen').classList.remove('hidden');
+                        this.roundScore = 0;
+                        this.mult = 1.0;
                     }, 4000);
                 }
             }
@@ -866,7 +874,6 @@
 
             startRound() {
                 this.roundScore = 0; 
-                this.displayRoundScore = 0;
                 this.mult = 1.0;
                 this.levelInRound = 1;
                 this.levelsPerRound = 5 + Math.floor(Math.random() * 4); 
@@ -1055,7 +1062,11 @@
             // --- ITEMS / SHOP ---
             buyItem(type, cost) {
                 if (this.coins >= cost) {
-                    this.coins -= cost;
+                    const coinsEl = document.getElementById('shop-coins');
+                    const newCoins = this.coins - cost;
+                    animateValue(coinsEl, this.coins, newCoins, 200);
+                    
+                    this.coins = newCoins;
                     this.inventory[type]++;
                     
                     // Update Shop UI
@@ -1102,6 +1113,7 @@
                 // Logic: Find a pair that deals <= remaining HP, prioritize Exact
                 // Simple: Loop pairs
                 let bestPair = null;
+                let foundExact = false;
                 
                 for(let i=0; i<this.hand.length; i++) {
                     for(let j=0; j<this.hand.length; j++) {
@@ -1109,24 +1121,23 @@
                         const c1 = this.hand[i];
                         const c2 = this.hand[j];
                         
-                        // Try bounds a=c1, b=c2 (must be a < b)
                         let a = c1.value;
                         let b = c2.value;
                         if (a >= b) continue;
 
                         const dmg = this.currentAntideriv.evaluate(b) - this.currentAntideriv.evaluate(a);
                         
-                        // Check if it's "safe" (<= remaining HP + epsilon)
                         if (dmg <= this.enemyHP + 0.1) {
-                            if (!bestPair) bestPair = [c1.id, c2.id];
-                            // Priority: Exact match
+                            if (!bestPair) bestPair = [c1.id, c2.id]; // Keep first safe pair
+                            
                             if (Math.abs(dmg - this.enemyHP) < 0.1) {
-                                bestPair = [c1.id, c2.id];
+                                bestPair = [c1.id, c2.id]; // Upgrade to exact
+                                foundExact = true;
                                 break;
                             }
                         }
                     }
-                    if (bestPair && bestPair.exact) break;
+                    if (foundExact) break;
                 }
 
                 if (bestPair) {
@@ -1280,7 +1291,7 @@
                 this.updateSlotUI();
                 
                 // Increase Mult
-                this.mult += 0.1; // +0.1 per card used (Tutorial req)
+                this.mult += 0.2; // +0.1 per card used (Tutorial req)
 
                 // Check Overkill
                 const remaining = this.enemyHP;
@@ -1309,7 +1320,7 @@
                         const pct = overkill / this.maxHP; 
                         const difficultyFactor = Math.max(1, this.difficulty / 2);
                         const penaltyMult = 1 + (pct * difficultyFactor); 
-                        const deduction = Math.ceil(overkill * penaltyMult * 5); 
+                        const deduction = Math.ceil(overkill * penaltyMult); 
                         scoreChange = -deduction;
                         logMsg = `<span class="text-amber-500 font-bold">OVERKILL!</span>`;
                         
@@ -1370,7 +1381,7 @@
                 this.updateHPUI();
 
                 // Check Level End
-                if (this.enemyHP <= 0.01 && !isOverkill) {
+                if (this.enemyHP <= 0.01) {
                      // Dead
                      if (this.mode === 'tutorial') {
                         setTimeout(() => this.advanceTutorial(), 1500);
@@ -1462,8 +1473,21 @@
                 
                 // Allow negative text?
                 if (!allowNegative && typeof displayHP === 'number' && displayHP < 0) displayHP = 0;
+
+                // Max HP: Use mixed fraction if not integer
+                let displayMaxHP = this.maxHP
+                if (!Number.isInteger(displayMaxHP)) {
+                    // Check if it's close to int
+                    if (Math.abs(Math.round(displayMaxHP) - displayMaxHP) < 0.001) {
+                         displayMaxHP = Math.round(displayMaxHP);
+                    } else {
+                         displayMaxHP = toMixed(displayMaxHP);
+                    }
+                } else {
+                    displayMaxHP = Math.ceil(displayMaxHP); // Safety
+                }
                 
-                hpText.innerText = `${displayHP}/${this.maxHP}`;
+                hpText.innerText = `${displayHP} / ${displayMaxHP}`;
 
                 // Bar Width
                 let pct = (this.enemyHP / this.maxHP) * 100;
