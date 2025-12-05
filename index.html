@@ -67,6 +67,16 @@
             box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
             background-color: #fefce8;
         }
+        /* Joker Card Style */
+        .card.joker-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+            border-color: #a855f7;
+            color: #7e22ce;
+        }
+        .joker-active {
+             color: #d946ef !important; /* Fuchsia for active joker numbers */
+             text-shadow: 0 0 5px rgba(217, 70, 239, 0.5);
+        }
 
         /* Slot Interactions */
         .slot { transition: all 0.2s; }
@@ -82,6 +92,7 @@
             pointer-events: none;
             animation: rise 1.5s ease-out forwards;
             z-index: 100;
+            white-space: nowrap; /* Fix truncation */
         }
         @keyframes rise {
             0% { transform: translateY(0) scale(1); opacity: 1; }
@@ -168,11 +179,16 @@
                     <!-- Round Info -->
                     <div class="flex flex-col items-center min-w-[80px]">
                         <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Round</div>
-                        <div class="flex gap-1 text-2xl font-bold text-white">
+                        <div class="flex gap-1 text-2xl font-bold text-white items-baseline">
                             <span id="round-display">1</span> 
                             <span>
                                 <div class="text-[8px] text-slate-500 uppercase tracking-widest font-bold" style="text-align: center; line-height: normal; transform: translateY(2px);">Level</div>
                                 <div class="text-sm text-slate-500" style="text-align: center;" id="level-display">1/5</div>
+                            </span>
+                            <!-- Timer (Hidden unless Timed Mode) -->
+                            <span id="timer-container" class="hidden ml-2 flex items-center gap-1 text-rose-500">
+                                <i data-lucide="timer" class="w-4 h-4"></i>
+                                <span id="timer-display" class="font-mono text-xl">00</span>
                             </span>
                         </div>
                     </div>
@@ -221,6 +237,7 @@
                             <div class="flex items-center gap-2">
                                 <div class="text-xs text-rose-400 font-bold uppercase tracking-widest">Enemy Function</div>
                                 <span id="explosive-badge" class="hidden px-2 py-0.5 bg-rose-600 text-white text-[10px] font-bold rounded uppercase tracking-wider animate-pulse">Explosive</span>
+                                <span id="timed-badge" class="hidden px-2 py-0.5 bg-amber-600 text-white text-[10px] font-bold rounded uppercase tracking-wider">Timed</span>
                             </div>
                             <div id="function-display" class="text-3xl font-bold text-white font-serif italic tracking-wide mt-1">f(x) = ?</div>
                         </div>
@@ -250,6 +267,14 @@
 
                         <div class="absolute bottom-4 left-4 pointer-events-none text-xs text-slate-600 opacity-50 group-hover:opacity-100 transition-opacity">
                             Scroll to Zoom • Drag to Pan
+                        </div>
+                        
+                        <!-- Brainpower Active Indicator -->
+                        <div id="brainpower-indicator" class="hidden absolute top-4 left-4 flex flex-col items-start gap-1">
+                            <div class="px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded shadow-lg animate-pulse flex items-center gap-2">
+                                <i data-lucide="brain-circuit" class="w-3 h-3"></i> BRAINPOWER
+                            </div>
+                            <div class="text-xs font-mono text-purple-400" id="brainpower-timer">100s</div>
                         </div>
                     </div>
                 </div>
@@ -335,7 +360,7 @@
                 </div>
 
                 <!-- Powerups Side -->
-                <div class="w-32 bg-slate-800 flex flex-col p-2 gap-2" id="powerups-container">
+                <div class="w-32 bg-slate-800 flex flex-col p-2 gap-2 overflow-y-auto" id="powerups-container">
                     <!-- Buttons Injected Here -->
                     <div class="text-[10px] text-slate-500 uppercase text-center font-bold tracking-widest mb-1">Items</div>
                 </div>
@@ -355,6 +380,27 @@
                 <div class="text-right">
                     <button onclick="document.getElementById('tutorial-modal').classList.add('hidden')" class="text-xs text-slate-500 hover:text-white uppercase font-bold tracking-widest">Dismiss</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Joker Selection Modal -->
+        <div id="joker-modal" class="hidden absolute inset-0 bg-slate-950/80 z-[70] flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-slate-900 border border-purple-500 p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+                <h2 class="text-2xl font-bold text-white mb-4">Select Joker Value</h2>
+                <div class="grid grid-cols-5 gap-4 mb-6">
+                    <!-- Buttons 0-9 Generated in JS -->
+                    <button onclick="game.selectJokerValue(0)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">0</button>
+                    <button onclick="game.selectJokerValue(1)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">1</button>
+                    <button onclick="game.selectJokerValue(2)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">2</button>
+                    <button onclick="game.selectJokerValue(3)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">3</button>
+                    <button onclick="game.selectJokerValue(4)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">4</button>
+                    <button onclick="game.selectJokerValue(5)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">5</button>
+                    <button onclick="game.selectJokerValue(6)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">6</button>
+                    <button onclick="game.selectJokerValue(7)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">7</button>
+                    <button onclick="game.selectJokerValue(8)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">8</button>
+                    <button onclick="game.selectJokerValue(9)" class="w-12 h-12 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded border border-slate-700 transition-colors">9</button>
+                </div>
+                <button onclick="game.cancelJoker()" class="text-sm text-slate-500 hover:text-white uppercase font-bold tracking-widest">Cancel</button>
             </div>
         </div>
 
@@ -405,15 +451,15 @@
 
         <!-- SHOP / ROUND END SCREEN -->
         <div id="shop-screen" class="hidden absolute inset-0 bg-slate-950 z-40 flex items-center justify-center">
-            <div class="max-w-3xl w-full p-8 bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl text-center relative overflow-hidden">
+            <div class="max-w-4xl w-full p-8 bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl text-center relative overflow-hidden flex flex-col max-h-[90vh]">
                 <!-- Decorative BG -->
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDQwaDQwVjBIMHY0MHptMjAgMjBWMjBoMjB2MjBIMjB6IiBmaWxsPSIjMWUyOTNiIiBmaWxsLW9wYWNpdHk9IjAuMSIvPjwvZz48L3N2Zz4=')] opacity-20"></div>
 
                 <h2 class="text-4xl font-bold text-white mb-2 relative z-10">ROUND COMPLETE</h2>
-                <div class="w-24 h-1 bg-sky-500 mx-auto mb-8 rounded-full relative z-10"></div>
+                <div class="w-24 h-1 bg-sky-500 mx-auto mb-6 rounded-full relative z-10"></div>
 
                 <!-- Score Animation Area -->
-                <div class="relative z-10 mb-8 font-mono text-xl grid grid-cols-3 gap-4" id="shop-anim-area">
+                <div class="relative z-10 mb-6 font-mono text-xl grid grid-cols-3 gap-4 shrink-0" id="shop-anim-area">
                     <!-- Dynamic Animation will happen here -->
                     <div class="flex flex-col items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
                         <div class="text-xs text-slate-400 mb-1">ROUND SCORE</div>
@@ -429,57 +475,42 @@
                             <i data-lucide="coins" class="w-6 h-6"></i>
                             <span id="shop-coins">0</span>
                         </div>
-                        <div id="coin-plus-vfx" class="absolute top-1/2 left-full ml-2 text-2xl font-bold text-emerald-400 opacity-0 transform -translate-y-1/2">+0</div>
+                        <div id="coin-plus-vfx" class="absolute top-1/2 left-full ml-2 text-2xl font-bold text-emerald-400 opacity-0 transform -translate-y-1/2 whitespace-nowrap">+0</div>
                     </div>
                 </div>
 
-                <!-- Shop Items -->
-                <div class="bg-slate-800/80 p-6 rounded-xl border border-dashed border-slate-700 mb-8 relative z-10">
-                    <div class="flex items-center justify-center gap-2 mb-4">
-                        <i data-lucide="shopping-cart" class="w-5 h-5 text-slate-400"></i>
-                        <h3 class="text-lg font-bold text-slate-300 uppercase tracking-widest">Supply Shop</h3>
-                    </div>
+                <!-- Shop Items Container -->
+                <div class="flex-1 overflow-y-auto mb-6 pr-2 relative z-10 space-y-6">
                     
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- Trash Can -->
-                        <div class="bg-slate-900 p-4 rounded border border-slate-700 flex justify-between items-center group hover:border-sky-500 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-rose-500/20 transition-colors">
-                                    <i data-lucide="trash-2" class="w-6 h-6"></i>
-                                </div>
-                                <div class="text-left">
-                                    <div class="text-white font-bold">Trash Can</div>
-                                    <div class="text-[10px] text-slate-400 w-32">Remove 1 Junk card from hand.</div>
-                                </div>
-                            </div>
-                            <button onclick="game.buyItem('trash', 2)" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm rounded flex items-center gap-1 transition-colors">
-                                <i data-lucide="coins" class="w-3 h-3"></i> 2
-                            </button>
+                    <!-- Standard Items -->
+                    <div class="bg-slate-800/80 p-6 rounded-xl border border-dashed border-slate-700">
+                        <div class="flex items-center justify-center gap-2 mb-4">
+                            <i data-lucide="shopping-cart" class="w-5 h-5 text-slate-400"></i>
+                            <h3 class="text-lg font-bold text-slate-300 uppercase tracking-widest">Supply Shop</h3>
                         </div>
+                        
+                        <div class="grid grid-cols-2 gap-4" id="shop-items-container">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
 
-                        <!-- Quick Hint -->
-                        <div class="bg-slate-900 p-4 rounded border border-slate-700 flex justify-between items-center group hover:border-sky-500 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-emerald-500/20 transition-colors">
-                                    <i data-lucide="lightbulb" class="w-6 h-6"></i>
-                                </div>
-                                <div class="text-left">
-                                    <div class="text-white font-bold">Quick Hint</div>
-                                    <div class="text-[10px] text-slate-400 w-32">Highlights a perfect pair. Can only be used once per level.</div>
-                                </div>
-                            </div>
-                            <button onclick="game.buyItem('hint', 3)" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm rounded flex items-center gap-1 transition-colors">
-                                <i data-lucide="coins" class="w-3 h-3"></i> 3
-                            </button>
+                    <!-- Boosters -->
+                    <div class="bg-purple-900/30 p-6 rounded-xl border border-dashed border-purple-500/50">
+                        <div class="flex items-center justify-center gap-2 mb-4">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-purple-400"></i>
+                            <h3 class="text-lg font-bold text-purple-300 uppercase tracking-widest">Booster Packs</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4" id="shop-boosters-container">
+                            <!-- Injected via JS -->
                         </div>
                     </div>
                 </div>
                 
-                <div id="next-round-warning" class="mb-4 text-rose-400 font-bold uppercase tracking-widest animate-pulse hidden relative z-10">
+                <div id="next-round-warning" class="mb-4 text-rose-400 font-bold uppercase tracking-widest animate-pulse hidden relative z-10 shrink-0">
                     Warning: Explosive Boss Approaching
                 </div>
 
-                <button onclick="game.nextRound()" class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl rounded-xl shadow-lg transition-all transform hover:-translate-y-1 relative z-10">
+                <button onclick="game.nextRound()" class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl rounded-xl shadow-lg transition-all transform hover:-translate-y-1 relative z-10 shrink-0">
                     START NEXT ROUND
                 </button>
             </div>
@@ -549,7 +580,6 @@
             }, delay);
         }
 
-        // Returns Promise that resolves when animation done
         function animateValue(obj, start, end, duration) {
             return new Promise(resolve => {
                 let startTimestamp = null;
@@ -573,18 +603,19 @@
         
         // Helper to convert float to fraction string (e.g. 0.333 -> 1/3)
         function floatToFraction(x) {
-            const tolerance = 1.0E-6;
-            let h1 = 1, h2 = 0, k1 = 0, k2 = 1;
-            let b = x;
-            do {
-                let a = Math.floor(b);
-                let aux = h1; h1 = a * h1 + h2; h2 = aux;
-                aux = k1; k1 = a * k1 + k2; k2 = aux;
-                b = 1 / (b - a);
-            } while (Math.abs(x - h1 / k1) > x * tolerance);
-            
-            if (k1 === 1) return `${h1}`; // Integer
-            return `(${h1}/${k1})`; // Surround with parentheses
+            if (Math.abs(x) < 0.000001) return "0";
+            if (Math.abs(x - Math.round(x)) < 0.000001) {
+                return Math.round(x).toString();
+            }
+            const maxDenom = 12; 
+            for (let d = 2; d <= maxDenom; d++) {
+                let numer = x * d;
+                if (Math.abs(numer - Math.round(numer)) < 0.000001) {
+                    let n = Math.round(numer);
+                    return `(${n}/${d})`; 
+                }
+            }
+            return x.toFixed(2); 
         }
 
         // Mixed Number Formatter
@@ -597,16 +628,12 @@
             
             if (decPart < 0.001) return `${sign}${intPart}`;
             
-            // Float to frac logic for decPart
-            let frac = floatToFraction(decPart); // returns "(n/d)"
-            // Remove parens for mixed number display aesthetic: 1 (1/3) vs 1 1/3
-            // Keeping parens for clarity per user request style preference or standard mixed
-            // User asked for: "1 (1/3)"
+            let frac = floatToFraction(decPart);
             if (frac.startsWith('(')) {
                 if (intPart === 0) return `${sign}${frac}`;
                 return `${sign}${intPart} ${frac}`;
             }
-            return `${sign}${num.toFixed(2)}`; // Fallback
+            return `${sign}${num.toFixed(2)}`;
         }
 
         class Term {
@@ -615,7 +642,7 @@
             evaluate(x) { return this.coeff * Math.pow(x, this.power); }
             toHTML() {
                 if (this.coeff === 0) return null;
-                if (this.power === 0) return floatToFraction(this.coeff); // Use fraction display
+                if (this.power === 0) return floatToFraction(this.coeff); 
                 
                 let cStr = this.coeff === 1 ? "" : (this.coeff === -1 ? "-" : floatToFraction(this.coeff));
                 if (this.power === 1) return `${cStr}x`;
@@ -635,7 +662,7 @@
 
         // --- LEVEL GENERATION ---
         class LevelGenerator {
-            static generate(round, isBoss, bossTypes = []) {
+            static generate(round, isBoss, bossTypes = [], jokerChance = 0) {
                 let diffMin = round - 1;
                 let diffMax = round + 1;
                 if (round === 1) { diffMin = 1; diffMax = 2; }
@@ -644,8 +671,6 @@
                 difficulty = Math.max(1, difficulty); 
 
                 let terms = [];
-                
-                // Poly Gen
                 if (difficulty <= 2) {
                     terms.push(new Term(1 + Math.floor(Math.random()*3), 1));
                     if(Math.random() > 0.5) terms.push(new Term(1 + Math.floor(Math.random()*5), 0));
@@ -668,7 +693,12 @@
                 let targetHP = 0;
                 let requiredCards = [];
                 
-                const numPairs = (1 + Math.floor(Math.random() * 2)) + Math.floor(difficulty / 3); // random 1-2 + bonus from difficulty
+                const numPairs = (1 + Math.floor(Math.random() * 2)) + Math.floor(difficulty / 3); 
+
+                let currentPairID = 1;
+
+                // Temporary storage to detect overlaps
+                let generatedPairs = []; // [{a, b, id}, ...]
 
                 for(let i=0; i<numPairs; i++) {
                     const a = Math.floor(Math.random() * 5); 
@@ -677,16 +707,46 @@
                     
                     if(dmg > 0.1) {
                         targetHP += dmg;
-                        requiredCards.push({ value: a, isJunk: false });
-                        requiredCards.push({ value: b, isJunk: false });
+                        generatedPairs.push({ a: a, b: b, id: currentPairID++ });
                     }
                 }
+
+                // Check for Overlapping Pairs (Integral Rule: a->b + b->c = a->c)
+                // If found, mark the 'b's as junk and create a new logical pair id for a and c
+                for (let i = 0; i < generatedPairs.length; i++) {
+                    for (let j = 0; j < generatedPairs.length; j++) {
+                        if (i === j) continue;
+                        
+                        // Check if Pair I ends where Pair J starts (or vice versa)
+                        if (generatedPairs[i].b === generatedPairs[j].a) {
+                            // Overlap found! i: a->b, j: b->c
+                            // Mark the 'b' cards as junk
+                            generatedPairs[i].bJunk = true;
+                            generatedPairs[j].aJunk = true;
+                            
+                            // Link 'a' of i and 'c' of j to a new shared ID
+                            const newID = currentPairID++;
+                            generatedPairs[i].id = newID;
+                            generatedPairs[j].id = newID;
+                        }
+                    }
+                }
+
+                // Push to hand
+                generatedPairs.forEach(p => {
+                    requiredCards.push({ value: p.a, isJunk: !!p.aJunk, pairID: p.aJunk ? -1 : p.id, isJoker: false });
+                    requiredCards.push({ value: p.b, isJunk: !!p.bJunk, pairID: p.bJunk ? -1 : p.id, isJoker: false });
+                });
 
                 // Junk
                 const junkCount = Math.max(0, Math.floor(Math.random() * 3) + (difficulty > 3 ? 2 : 0));
                 for(let i=0; i<junkCount; i++) {
-                    requiredCards.push({ value: Math.floor(Math.random() * 8), isJunk: true });
-                    console.log("Added junk card");
+                    requiredCards.push({ value: Math.floor(Math.random() * 8), isJunk: true, pairID: -1, isJoker: false });
+                }
+
+                // Jokers (High difficulty or booster)
+                if (difficulty >= 8 || Math.random() < jokerChance) {
+                    requiredCards.push({ value: 'JOKER', isJunk: false, pairID: -1, isJoker: true });
                 }
                 
                 requiredCards.sort(() => Math.random() - 0.5);
@@ -728,13 +788,22 @@
                 this.isExplosive = false;
                 this.isBoss = false;
                 this.currentBossTypes = [];
+                this.isTimed = false;
 
-                // Inventory
-                this.inventory = {
-                    trash: 0,
-                    hint: 0
-                };
+                // Inventory & Effects
+                this.inventory = { trash: 0, hint: 0, freeze: 0, brainpower: 0, booster: 0 };
                 this.hintUsedThisLevel = false;
+                this.brainpowerActive = false;
+                this.brainpowerTimer = 0;
+                this.freezeActive = false;
+                this.freezeTimer = 0;
+                this.boosterActive = false;
+                this.jokerChance = 0; // 0 to 1
+
+                // Timers
+                this.levelTimer = 0;
+                this.maxLevelTimer = 0;
+                this.activeTimerInterval = null;
 
                 // Tutorial State
                 this.tutorialStep = 0;
@@ -743,6 +812,7 @@
                 this.slotA = null;
                 this.slotB = null;
                 this.hintsEnabled = false;
+                this.tempJokerSlot = null; // Used during Joker modal selection
 
                 // Rendering
                 this.canvas = document.getElementById('graph-canvas');
@@ -802,20 +872,25 @@
                 this.displayRoundScore = 0;
                 this.totalScore = 0;
                 this.tutorialStep = 1;
-                this.inventory = { trash: 0, hint: 0 };
+                this.inventory = { trash: 0, hint: 0, freeze: 0, brainpower: 0, booster: 0 };
                 document.getElementById('start-screen').classList.add('hidden');
                 
                 // Tutorial Step 1
                 this.loadData({
                     terms: [new Term(2, 0)], 
                     hp: 10,
-                    hand: [0, 5, 2, 3, 4], // Treated as raw numbers in loadData but we need to ensure junk logic
+                    hand: [
+                        {value: 0, isJunk: false, pairID: 1}, 
+                        {value: 5, isJunk: false, pairID: 1}, 
+                        {value: 2, isJunk: true, pairID: -1}, 
+                        {value: 3, isJunk: true, pairID: -1}, 
+                        {value: 4, isJunk: true, pairID: -1}
+                    ], 
                     isExplosive: false,
                     isBoss: false,
                     difficulty: 1
                 });
-                // Manually set junk status for tutorial hands in loadData override or just assume false for manual arrays
-                this.showTutorialPopup("Basics", "Welcome! The goal is to defeat the Enemy Function by calculating area.<br><br><b>Drag '0' to 'a' and '5' to 'b'</b> to calculate $\\int_0^5 2 dx$.<br><br>You can <b>Pan</b> the graph by dragging and <b>Zoom</b> with your scroll wheel.");
+                this.showTutorialPopup("Basics", "Your hand consists of 1 or more <b>Perfect Pairs</b> (cards needed for exact lethal damage) and extra <b>Junk Cards</b> to throw you off!<br><br><b>Drag '0' to 'a' and '5' to 'b'</b> to calculate $\\int_0^5 2 dx$.");
                 this.showTutorialMsg("Tutorial: Basic Integration");
                 this.drawLoop();
             }
@@ -828,12 +903,17 @@
                     this.loadData({
                         terms: [new Term(1, 1)], 
                         hp: 12, 
-                        hand: [0, 4, 0, 6],
+                        hand: [
+                            {value: 0, isJunk: false, pairID: 1}, 
+                            {value: 4, isJunk: false, pairID: 1}, 
+                            {value: 0, isJunk: true, pairID: -1}, 
+                            {value: 6, isJunk: true, pairID: -1} 
+                        ],
                         isExplosive: false,
                         isBoss: false,
                         difficulty: 1
                     });
-                    this.showTutorialPopup("Scoring Rules", "Every card you use increases your <b>Multiplier</b> by +0.1.<br><br><b>Overkill Penalty:</b> If you deal more damage than HP, you lose score! The penalty is <b>Amplified</b> ($1 + 2\\times\\%_{excess}$) based on how much you miss by.<br><br><b>Perfect Kill:</b> Hit 0 HP exactly for a bonus ($1 \\times MaxHP$).");
+                    this.showTutorialPopup("Scoring Rules", "Every card you use increases your <b>Multiplier</b>.<br><br><b>Overkill Penalty:</b> Dealing more damage than HP reduces score. <br><br><b>Perfect Kill:</b> A perfect kill is <b>ALWAYS</b> possible! (Except here, to show you an overkill). Try overkilling with 0 and 6.");
                 }
                 else if (this.tutorialStep === 3) {
                     this.endRound(); 
@@ -844,7 +924,7 @@
                     this.mult = 1.0;
                     this.round = 2; 
                     this.levelInRound = 1; 
-                    const bossData = LevelGenerator.generate(3, true, ['explosive']); 
+                    const bossData = LevelGenerator.generate(3, true, ['explosive', 'timed']); 
                     this.loadData(bossData);
                     document.getElementById('shop-screen').classList.add('hidden');
                     this.showTutorialPopup("BOSS BATTLE", "This is an <b>Explosive Boss</b>.<br><br>You <b>MUST</b> hit 0 HP exactly. If you overkill an Explosive Boss, the run ends immediately.<br><br>Calculate carefully!");
@@ -866,7 +946,8 @@
                 this.round = 1;
                 this.coins = 0;
                 this.totalScore = 0;
-                this.inventory = { trash: 0, hint: 0 };
+                this.inventory = { trash: 0, hint: 0, freeze: 0, brainpower: 0, booster: 0 };
+                this.jokerChance = 0;
                 this.startRound();
                 document.getElementById('start-screen').classList.add('hidden');
                 this.drawLoop();
@@ -890,12 +971,29 @@
                 const isBossRound = (this.round % 3 === 0);
                 if (isBossRound) this.levelsPerRound = 1;
                 
-                const bossTypes = ['explosive'];
-                const data = LevelGenerator.generate(this.round, isBossRound, bossTypes);
+                let bossTypes = [];
+                if (isBossRound) {
+                     bossTypes.push('explosive');
+                     if (this.round > 3 && Math.random() < 0.3) bossTypes.push('timed');
+                }
+
+                const data = LevelGenerator.generate(this.round, isBossRound, bossTypes, this.jokerChance);
+                
+                // Add Timed Modifier to regular levels occasionally
+                if (!isBossRound && this.round > 2 && Math.random() < 0.2) {
+                    data.isTimed = true;
+                } else if (isBossRound && bossTypes.includes('timed')) {
+                    data.isTimed = true;
+                }
+
                 this.loadData(data);
             }
 
             loadData(data) {
+                // Clear active effects
+                this.boosterActive = false;
+                this.hintUsedThisLevel = false;
+
                 this.currentFunction = new Polynomial(data.terms);
                 this.currentAntideriv = this.currentFunction.integrate();
                 this.maxHP = data.hp;
@@ -904,24 +1002,28 @@
                 this.isBoss = data.isBoss;
                 this.currentBossTypes = data.bossTypes || [];
                 this.difficulty = data.difficulty;
+                this.isTimed = !!data.isTimed;
                 
-                // Map hand. If raw numbers (tutorial), assume non-junk
+                // Map hand
                 this.hand = data.hand.map(item => {
                     const val = typeof item === 'object' ? item.value : item;
                     const junk = typeof item === 'object' ? item.isJunk : false;
-                    return { id: Math.random().toString(36), value: val, isJunk: junk };
+                    const pid = typeof item === 'object' ? item.pairID : -1;
+                    const joker = typeof item === 'object' ? item.isJoker : false;
+                    return { id: Math.random().toString(36), value: val, isJunk: junk, pairID: pid, isJoker: joker };
                 });
 
                 this.slotA = null; this.slotB = null;
                 this.updateSlotUI();
                 this.pan = { x: 0, y: 0, zoom: 1 };
-                this.hintUsedThisLevel = false;
                 
                 document.getElementById('function-display').innerHTML = `f(x) = ${this.currentFunction.toDisplay()}`;
                 document.getElementById('antideriv-display').innerHTML = this.currentAntideriv.toDisplay();
                 
                 const badge = document.getElementById('explosive-badge');
                 const warning = document.getElementById('boss-warning-bg');
+                const timeBadge = document.getElementById('timed-badge');
+                
                 if (this.isExplosive) {
                     badge.classList.remove('hidden');
                     warning.classList.remove('hidden');
@@ -930,6 +1032,16 @@
                     badge.classList.add('hidden');
                     warning.classList.add('hidden');
                     document.getElementById('function-display').classList.remove('text-rose-200');
+                }
+
+                if (this.isTimed) {
+                    timeBadge.classList.remove('hidden');
+                    document.getElementById('timer-container').classList.remove('hidden');
+                    this.maxLevelTimer = 30 + Math.floor(Math.random() * 20); // 30-50s
+                    this.levelTimer = this.maxLevelTimer;
+                } else {
+                    timeBadge.classList.add('hidden');
+                    document.getElementById('timer-container').classList.add('hidden');
                 }
 
                 this.updateGlobalUI();
@@ -954,22 +1066,17 @@
                 coinsEl.innerHTML = this.coins;
                 plusVfx.style.opacity = '0';
                 
-                // Reset styling on score container from any previous runs
+                // Reset styling
                 scoreEl.parentElement.style.transform = 'none';
                 scoreEl.parentElement.style.zIndex = 'auto';
 
                 await sleep(500);
 
-                // 2. Mult pops under Score (Conceptual logic: we make the score count up)
+                // 2. Mult pops under Score
                 const total = Math.floor(this.roundScore * this.mult);
-                
-                // Spawn "x3.6" VFX
                 const rect = scoreEl.getBoundingClientRect();
                 spawnFloatingText(`x${this.mult.toFixed(1)}`, rect.left + rect.width/2, rect.top + 50, 'text-amber-400', 0);
-                
-                // Score Counts up to Total
                 await animateValue(scoreEl, this.roundScore, total, 1500);
-                
                 await sleep(500);
 
                 // 3. Score Pops Out & Big
@@ -979,11 +1086,9 @@
                 scoreContainer.style.zIndex = "50";
                 scoreContainer.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.5)";
                 scoreEl.classList.add("text-sky-400");
-                
                 await sleep(600);
 
-                // 4. Line & 100 appear (Visual division)
-                // We'll append temporary elements
+                // 4. Visual Division
                 const divider = document.createElement('div');
                 divider.className = "w-full h-1 bg-white my-1";
                 const div100 = document.createElement('div');
@@ -991,10 +1096,9 @@
                 div100.innerText = "100";
                 scoreContainer.appendChild(divider);
                 scoreContainer.appendChild(div100);
-
                 await sleep(800);
 
-                // 5. Fade out divider, count down score to Result
+                // 5. Calculate Result
                 divider.style.transition = "opacity 0.5s";
                 div100.style.transition = "opacity 0.5s";
                 divider.style.opacity = "0";
@@ -1004,11 +1108,8 @@
                 await animateValue(scoreEl, total, earned, 1000);
                 scoreEl.classList.remove("text-sky-400");
                 scoreEl.classList.add("text-yellow-400");
-
-                // Cleanup divider
                 divider.remove();
                 div100.remove();
-
                 await sleep(400);
 
                 // 6. Move Result to Coins
@@ -1016,18 +1117,13 @@
                 scoreContainer.style.boxShadow = "none";
                 scoreContainer.style.zIndex = "auto";
                 
-                // Show "+Earned"
                 plusVfx.innerHTML = `+${earned}`;
                 plusVfx.style.opacity = "1";
                 plusVfx.style.animation = "floatUpFade 1.5s forwards";
 
-                // Count up Coins
                 const newCoins = this.coins + earned;
                 await animateValue(coinsEl, this.coins, newCoins, 1000);
-                
                 this.coins = newCoins;
-                
-                // Reset score display for next logic
                 await sleep(1000);
             }
 
@@ -1038,6 +1134,9 @@
                 
                 // Trigger Async Animation
                 this.animateRoundEndSequence();
+
+                // Render Shop
+                this.renderShop();
 
                 // Warn about next round
                 const nextIsBoss = ((this.round + 1) % 3 === 0);
@@ -1067,38 +1166,93 @@
                     animateValue(coinsEl, this.coins, newCoins, 200);
                     
                     this.coins = newCoins;
-                    this.inventory[type]++;
+                    if (type === 'joker_chance') {
+                        this.jokerChance += 0.05;
+                    } else {
+                        this.inventory[type]++;
+                    }
                     
-                    // Update Shop UI
-                    document.getElementById('shop-coins').innerText = this.coins;
+                    this.renderShop(); // Update labels
                     
-                    // Spawn particle
                     const rect = document.getElementById('shop-coins').getBoundingClientRect();
                     spawnFloatingText(`- ${cost}`, rect.left + 50, rect.top, 'text-rose-400');
                 } else {
-                    // Shake coins
                     const c = document.getElementById('shop-coins');
                     c.classList.add('shake');
                     setTimeout(() => c.classList.remove('shake'), 500);
                 }
             }
+            
+            renderShop() {
+                const itemsC = document.getElementById('shop-items-container');
+                const boostC = document.getElementById('shop-boosters-container');
+                
+                // Helper to create Item
+                const createItem = (id, name, desc, icon, color, cost) => `
+                    <div class="bg-slate-900 p-4 rounded border border-slate-700 flex justify-between items-center group hover:border-sky-500 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-${color}-500/20 transition-colors">
+                                <i data-lucide="${icon}" class="w-6 h-6"></i>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-white font-bold flex gap-2 items-center">
+                                    ${name} <span class="text-xs text-sky-400 bg-slate-800 px-1 rounded">${this.inventory[id] || 0}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 w-32 leading-tight">${desc}</div>
+                            </div>
+                        </div>
+                        <button onclick="game.buyItem('${id}', ${cost})" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm rounded flex items-center gap-1 transition-colors">
+                            <i data-lucide="coins" class="w-3 h-3"></i> ${cost}
+                        </button>
+                    </div>
+                `;
+
+                // Standard Items
+                itemsC.innerHTML = 
+                    createItem('trash', 'Trash Can', 'Remove 1 Junk card.', 'trash-2', 'rose', 2) +
+                    createItem('hint', 'Quick Hint', 'Highlight a perfect pair.', 'lightbulb', 'emerald', 3) +
+                    createItem('freeze', 'Freeze Clock', 'Stop time for 15s.', 'snowflake', 'cyan', 4) +
+                    createItem('brainpower', 'Brainpower', 'Show evaluation for 100s.', 'brain-circuit', 'purple', 5) +
+                    createItem('booster', 'Score Boost', 'Triple score on Perfect Kill.', 'zap', 'yellow', 6);
+
+                // Booster Packs (Jesters)
+                // Only show if chance < 50%
+                if (this.jokerChance < 0.5) {
+                    boostC.innerHTML = `
+                        <div class="bg-slate-900 p-4 rounded border border-slate-700 flex justify-between items-center group hover:border-purple-500 transition-colors col-span-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-slate-800 rounded flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-purple-500/20 transition-colors">
+                                    <i data-lucide="crown" class="w-6 h-6"></i>
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-white font-bold">Court Jesters Pack</div>
+                                    <div class="text-[10px] text-slate-400 leading-tight">Increase Joker drop chance by 5%. (Current: ${(this.jokerChance*100).toFixed(0)}%)</div>
+                                </div>
+                            </div>
+                            <button onclick="game.buyItem('joker_chance', 15)" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm rounded flex items-center gap-1 transition-colors">
+                                <i data-lucide="coins" class="w-3 h-3"></i> 15
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    boostC.innerHTML = `<div class="col-span-2 text-center text-xs text-slate-500">Sold Out</div>`;
+                }
+
+                lucide.createIcons();
+            }
+
+            // --- POWERUP LOGIC ---
 
             useTrash() {
                 if (this.inventory.trash <= 0) return;
-                
-                // Logic
                 const junkIdx = this.hand.findIndex(c => c.isJunk);
                 if (junkIdx === -1) {
                     spawnFloatingText("NO JUNK CARDS!", window.innerWidth/2, window.innerHeight - 200, 'text-slate-400');
                     return;
                 }
-                
-                // Consume
                 this.inventory.trash--;
-                const removed = this.hand.splice(junkIdx, 1)[0];
-                
+                this.hand.splice(junkIdx, 1);
                 spawnFloatingText("TRASHED!", window.innerWidth/2, window.innerHeight - 200, 'text-slate-500');
-                
                 this.renderHand();
                 this.renderPowerups();
             }
@@ -1110,91 +1264,104 @@
                     return;
                 }
 
-                // Logic: Find a pair that deals <= remaining HP, prioritize Exact
-                // Simple: Loop pairs
-                let bestPair = null;
-                let foundExact = false;
-                
-                for(let i=0; i<this.hand.length; i++) {
-                    for(let j=0; j<this.hand.length; j++) {
-                        if (i === j) continue;
-                        const c1 = this.hand[i];
-                        const c2 = this.hand[j];
-                        
-                        let a = c1.value;
-                        let b = c2.value;
-                        if (a >= b) continue;
+                // Gather all cards (hand + slots)
+                let allCards = [...this.hand];
+                if (this.slotA) allCards.push(this.slotA);
+                if (this.slotB) allCards.push(this.slotB);
 
-                        const dmg = this.currentAntideriv.evaluate(b) - this.currentAntideriv.evaluate(a);
-                        
-                        if (dmg <= this.enemyHP + 0.1) {
-                            if (!bestPair) bestPair = [c1.id, c2.id]; // Keep first safe pair
-                            
-                            if (Math.abs(dmg - this.enemyHP) < 0.1) {
-                                bestPair = [c1.id, c2.id]; // Upgrade to exact
-                                foundExact = true;
-                                break;
-                            }
-                        }
+                // Find matching pairID
+                let match = null;
+                // Group by PairID
+                const pairs = {};
+                allCards.forEach(c => {
+                    if (c.pairID !== -1) {
+                        if (!pairs[c.pairID]) pairs[c.pairID] = [];
+                        pairs[c.pairID].push(c.id);
                     }
-                    if (foundExact) break;
+                });
+
+                // Find a complete pair (2 cards with same ID)
+                for (const pid in pairs) {
+                    if (pairs[pid].length >= 2) {
+                        match = pairs[pid].slice(0, 2);
+                        break;
+                    }
                 }
 
-                if (bestPair) {
+                if (match) {
                     this.inventory.hint--;
                     this.hintUsedThisLevel = true;
-                    this.renderPowerups(); // Update count
+                    this.renderPowerups();
                     
-                    // Highlight cards
-                    const cardEls = document.querySelectorAll('.card');
-                    cardEls.forEach(el => {
-                        if (bestPair.includes(el.dataset.id)) {
-                            el.classList.add('highlight-hint');
-                        }
+                    // Highlight Hand
+                    document.querySelectorAll('.card').forEach(el => {
+                        if (match.includes(el.dataset.id)) el.classList.add('highlight-hint');
                     });
-                    
+                    // Highlight Slots
+                    if (this.slotA && match.includes(this.slotA.id)) document.getElementById('slot-a').classList.add('ring-2', 'ring-yellow-400');
+                    if (this.slotB && match.includes(this.slotB.id)) document.getElementById('slot-b').classList.add('ring-2', 'ring-yellow-400');
+
                     spawnFloatingText("PAIR FOUND!", window.innerWidth/2, window.innerHeight - 200, 'text-yellow-300');
                 } else {
-                    spawnFloatingText("NO SAFE PAIR!", window.innerWidth/2, window.innerHeight - 200, 'text-rose-400');
+                    spawnFloatingText("NO PERFECT PAIR!", window.innerWidth/2, window.innerHeight - 200, 'text-rose-400');
                 }
+            }
+
+            useFreeze() {
+                if (this.inventory.freeze <= 0 || !this.isTimed) return;
+                this.inventory.freeze--;
+                this.freezeActive = true;
+                this.freezeTimer = 15;
+                spawnFloatingText("TIME FROZEN!", window.innerWidth/2, window.innerHeight - 200, 'text-cyan-400');
+                this.renderPowerups();
+            }
+
+            useBrainpower() {
+                if (this.inventory.brainpower <= 0) return;
+                if (this.brainpowerActive) return;
+                this.inventory.brainpower--;
+                this.brainpowerActive = true;
+                this.brainpowerTimer = 100;
+                document.getElementById('brainpower-indicator').classList.remove('hidden');
+                this.updatePreview(); // Show math
+                spawnFloatingText("BRAINPOWER!", window.innerWidth/2, window.innerHeight - 200, 'text-purple-400');
+                this.renderPowerups();
+            }
+
+            useBooster() {
+                if (this.inventory.booster <= 0) return;
+                if (this.boosterActive) return;
+                this.inventory.booster--;
+                this.boosterActive = true;
+                spawnFloatingText("BOOSTER ACTIVE!", window.innerWidth/2, window.innerHeight - 200, 'text-yellow-400');
+                this.renderPowerups();
             }
 
             renderPowerups() {
                 const c = document.getElementById('powerups-container');
-                // Keep header
                 c.innerHTML = '<div class="text-[10px] text-slate-500 uppercase text-center font-bold tracking-widest mb-1">Items</div>';
                 
-                // Trash Can
-                if (this.inventory.trash > 0) {
+                const createBtn = (key, icon, color, title, action, disabled = false) => {
+                    if (this.inventory[key] <= 0) return;
                     const btn = document.createElement('button');
-                    btn.className = "w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded p-2 flex items-center justify-between group transition-all relative";
-                    btn.onclick = () => this.useTrash();
-                    btn.title = "Remove 1 Junk Card";
+                    btn.className = `w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded p-2 flex items-center justify-between group transition-all mb-1 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+                    if (!disabled) btn.onclick = action;
+                    btn.title = title;
                     btn.innerHTML = `
                         <div class="flex items-center gap-2">
-                            <i data-lucide="trash-2" class="w-4 h-4 text-slate-400 group-hover:text-white"></i>
-                            <span class="text-xs font-bold text-white">Trash</span>
+                            <i data-lucide="${icon}" class="w-4 h-4 text-${color}-500 group-hover:text-${color}-300"></i>
+                            <span class="text-xs font-bold text-white">${title}</span>
                         </div>
-                        <span class="text-xs font-bold text-sky-400 bg-slate-900 px-1.5 rounded">${this.inventory.trash}</span>
+                        <span class="text-xs font-bold text-sky-400 bg-slate-900 px-1.5 rounded">${this.inventory[key]}</span>
                     `;
                     c.appendChild(btn);
-                }
+                };
 
-                // Hint
-                if (this.inventory.hint > 0) {
-                    const btn = document.createElement('button');
-                    btn.className = `w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded p-2 flex items-center justify-between group transition-all relative ${this.hintUsedThisLevel ? 'opacity-50 cursor-not-allowed' : ''}`;
-                    btn.onclick = () => this.useHint();
-                    btn.title = "Highlight Perfect Pair";
-                    btn.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="lightbulb" class="w-4 h-4 text-yellow-500 group-hover:text-yellow-300"></i>
-                            <span class="text-xs font-bold text-white">Hint</span>
-                        </div>
-                        <span class="text-xs font-bold text-sky-400 bg-slate-900 px-1.5 rounded">${this.inventory.hint}</span>
-                    `;
-                    c.appendChild(btn);
-                }
+                createBtn('trash', 'trash-2', 'rose', 'Trash', () => this.useTrash());
+                createBtn('hint', 'lightbulb', 'yellow', 'Hint', () => this.useHint(), this.hintUsedThisLevel);
+                createBtn('freeze', 'snowflake', 'cyan', 'Freeze', () => this.useFreeze(), !this.isTimed);
+                createBtn('brainpower', 'brain-circuit', 'purple', 'Brain', () => this.useBrainpower(), this.brainpowerActive);
+                createBtn('booster', 'zap', 'yellow', 'Boost', () => this.useBooster(), this.boosterActive);
                 
                 lucide.createIcons();
             }
@@ -1209,7 +1376,16 @@
                     slot.addEventListener('drop', e => {
                         e.preventDefault();
                         slot.classList.remove('drag-over');
-                        this.fillSlot(slot.dataset.slot, JSON.parse(e.dataTransfer.getData('text/plain')));
+                        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        
+                        // Handle Joker Drop
+                        if (data.isJoker) {
+                            this.tempJokerSlot = id; // 'slot-a' or 'slot-b'
+                            this.tempJokerData = data;
+                            document.getElementById('joker-modal').classList.remove('hidden');
+                        } else {
+                            this.fillSlot(slot.dataset.slot, data);
+                        }
                     });
                     slot.addEventListener('click', () => {
                         if (id === 'slot-a' && this.slotA) { this.hand.push(this.slotA); this.slotA = null; }
@@ -1220,9 +1396,27 @@
                 });
             }
 
+            // Joker Modal Functions
+            selectJokerValue(val) {
+                if (!this.tempJokerSlot) return;
+                const slotType = this.tempJokerSlot === 'slot-a' ? 'a' : 'b';
+                // Clone joker data but add assignedValue
+                const card = { ...this.tempJokerData, value: val, isJoker: true };
+                this.fillSlot(slotType, card);
+                document.getElementById('joker-modal').classList.add('hidden');
+                this.tempJokerSlot = null;
+            }
+
+            cancelJoker() {
+                document.getElementById('joker-modal').classList.add('hidden');
+                this.tempJokerSlot = null;
+            }
+
             fillSlot(type, card) {
                 if (type === 'a') { if(this.slotA) this.hand.push(this.slotA); this.slotA = card; }
                 if (type === 'b') { if(this.slotB) this.hand.push(this.slotB); this.slotB = card; }
+                
+                // Remove from hand by ID
                 this.hand = this.hand.filter(c => c.id !== card.id);
                 this.updateSlotUI();
                 this.renderHand();
@@ -1232,8 +1426,11 @@
                 const map = { a: this.slotA, b: this.slotB };
                 ['a', 'b'].forEach(k => {
                     const el = document.getElementById(`slot-${k}`);
+                    el.classList.remove('ring-2', 'ring-yellow-400'); // Remove hint ring
                     if (map[k]) {
-                        el.innerHTML = `<span class="text-3xl text-sky-400 font-bold pointer-events-none">${map[k].value}</span>`;
+                        const isJoker = map[k].isJoker;
+                        const valClass = isJoker ? 'text-fuchsia-400 j-active' : 'text-sky-400';
+                        el.innerHTML = `<span class="text-3xl ${valClass} font-bold pointer-events-none">${map[k].value}</span>`;
                         el.classList.add('bg-sky-900', 'border-sky-400');
                     } else {
                         el.innerHTML = `<span class="text-slate-600 text-xs pointer-events-none font-sans">${k}</span>`;
@@ -1247,8 +1444,14 @@
                 const btn = document.getElementById('btn-integrate');
                 const preview = document.getElementById('calculation-preview');
                 const validMsg = document.getElementById('validation-msg');
+                const hintInd = document.getElementById('hint-indicator');
                 
                 validMsg.innerText = '';
+
+                // Logic for Brainpower/Settings
+                const showMath = this.hintsEnabled || this.brainpowerActive;
+                hintInd.style.opacity = showMath ? 1 : 0;
+                document.getElementById('math-feedback').style.opacity = showMath ? 1 : 0;
 
                 if (this.slotA && this.slotB) {
                     const a = parseInt(this.slotA.value);
@@ -1264,8 +1467,7 @@
                         const Fb = this.currentAntideriv.evaluate(b);
                         const res = Fb - Fa;
                         
-                        if (this.hintsEnabled) {
-                            // Use Mixed Numbers for display
+                        if (showMath) {
                             preview.innerHTML = `<span class="text-sky-400">${toMixed(Fb)}</span> - <span class="text-purple-400">${toMixed(Fa)}</span> = <span class="text-white font-bold">${toMixed(res)}</span>`;
                         } else {
                             preview.innerHTML = `F(${b}) - F(${a}) = <span class="text-white font-bold">?</span>`;
@@ -1284,14 +1486,14 @@
                 const a = parseInt(this.slotA.value);
                 const b = parseInt(this.slotB.value);
                 const damage = this.currentAntideriv.evaluate(b) - this.currentAntideriv.evaluate(a);
-                const intDamage = Math.floor(damage); // Damage is usually integer due to coef choices, but safe floor
+                const intDamage = Math.floor(damage); 
 
-                // Consume Cards (don't return to hand)
+                // Consume Cards
                 this.slotA = null; this.slotB = null;
                 this.updateSlotUI();
                 
-                // Increase Mult
-                this.mult += 0.2; // +0.1 per card used (Tutorial req)
+                // Increase Mult (0.2 per attack = 0.1 per card)
+                this.mult += 0.2; 
 
                 // Check Overkill
                 const remaining = this.enemyHP;
@@ -1302,65 +1504,66 @@
                 let isPerfectKill = false;
                 let isOverkill = false;
 
-                // 1. Damage VFX (Orange) - Immediate
+                // 1. Damage VFX
                 const w = window.innerWidth; const h = window.innerHeight;
                 spawnFloatingText(`-${toMixed(damage)}`, w/2, h/2 - 50, 'text-orange-400');
                 this.shakeScreen(15, 200);
 
                 if (overkill > 0.01) {
-                    // Overkill Logic
+                    // Overkill
                     isOverkill = true;
+                    const pct = overkill / this.maxHP; 
+                    const difficultyFactor = Math.max(1, this.difficulty / 2);
+                    const penaltyMult = 1 + (pct * difficultyFactor); 
+                    const deduction = Math.ceil(overkill * penaltyMult); 
+                    scoreChange = -deduction;
                     
-                    if (this.isExplosive) {
-                        // Handled in Explosion Sequence below
-                        scoreChange = 0; // Will be reset logic
-                    } else {
-                        // Normal Overkill Penalty
-                        // Formula: (overkill / maxHP) * (difficulty/2)
-                        const pct = overkill / this.maxHP; 
-                        const difficultyFactor = Math.max(1, this.difficulty / 2);
-                        const penaltyMult = 1 + (pct * difficultyFactor); 
-                        const deduction = Math.ceil(overkill * penaltyMult); 
-                        scoreChange = -deduction;
-                        logMsg = `<span class="text-amber-500 font-bold">OVERKILL!</span>`;
-                        
-                        // Screen Flash Red
-                        const overlay = document.getElementById('flash-overlay');
-                        overlay.classList.add('flash-red');
-                        setTimeout(() => overlay.classList.remove('flash-red'), 500);
-                        
-                        spawnFloatingText("OVERKILL!", w/2, h/2 - 100, 'text-rose-500 font-black', 100);
-                    }
+                    const overlay = document.getElementById('flash-overlay');
+                    overlay.classList.add('flash-red');
+                    setTimeout(() => overlay.classList.remove('flash-red'), 500);
+                    
+                    spawnFloatingText("OVERKILL!", w/2, h/2 - 100, 'text-rose-500 font-black', 100);
+                    
+                    // Log shows damage and score change
+                    logMsg = `<span class="text-amber-500 font-bold">OVERKILL!</span> ${toMixed(damage)} Dmg (<span class="text-rose-400">${scoreChange} Score</span>)`;
+
                 } else if (Math.abs(overkill) < 0.01) {
                     // Perfect Kill
                     isPerfectKill = true;
-                    const bonus = Math.floor(this.maxHP * 1 * Math.max(1, this.difficulty)); // Bonus = MaxHP * Difficulty
+                    let bonus = Math.floor(this.maxHP * 1 * Math.max(1, this.difficulty)); 
                     scoreChange = intDamage + bonus;
-                    logMsg = `<span class="text-emerald-400 font-bold">PERFECT KILL!</span>`;
+                    
+                    // Booster?
+                    if (this.boosterActive) {
+                        scoreChange *= 3;
+                        spawnFloatingText("3X BOOST!", w/2, h/2 - 150, 'text-yellow-400 font-black', 200);
+                    }
 
-                    // Screen Flash Green
                     const overlay = document.getElementById('flash-overlay');
                     overlay.classList.add('flash-green');
                     setTimeout(() => overlay.classList.remove('flash-green'), 500);
 
                     spawnFloatingText("PERFECT KILL!", w/2, h/2 - 100, 'text-emerald-400 font-black', 100);
-                    
-                    // Bonus Text
                     spawnFloatingText(`+${bonus} Bonus`, w/2 + 100, h/2, 'text-emerald-200', 400);
+
+                    logMsg = `<span class="text-emerald-400 font-bold">PERFECT!</span> ${toMixed(damage)} Dmg (<span class="text-emerald-300">+${scoreChange} Score</span>)`;
+
                 } else {
                     // Normal Hit
                     scoreChange = intDamage;
-                    logMsg = `<span class="text-sky-400 font-bold">HIT!</span> ${toMixed(damage)} Damage`;
+                    logMsg = `<span class="text-sky-400 font-bold">HIT!</span> ${toMixed(damage)} Dmg (<span class="text-emerald-300">+${scoreChange} Score</span>)`;
                 }
 
-                // Update Logic with Animations
-                if (!this.isExplosive || !isOverkill) {
-                    // Apply Score Logic
+                // Update Score
+                if (this.isExplosive && isOverkill) {
+                    // For explosives, score resets to 0. Visual update handles in triggerExplosion
+                    scoreChange = 0; // Don't add negative, logic handled below
+                    logMsg = `<span class="text-rose-500 font-bold">EXPLOSION!</span> Score Reset`;
+                } else {
                     this.roundScore += Math.floor(scoreChange);
                     if (this.roundScore < 0) this.roundScore = 0;
                     if (scoreChange > 0) this.totalScore += Math.floor(scoreChange);
                     
-                    // 2. Score VFX - Delayed
                     const scoreText = scoreChange >= 0 ? `+${scoreChange}` : `${scoreChange}`;
                     const scoreColor = scoreChange >= 0 ? 'text-emerald-400' : 'text-rose-500';
                     const scoreAnchor = document.getElementById('score-vfx-anchor').getBoundingClientRect();
@@ -1369,20 +1572,19 @@
 
                 document.getElementById('message-log').innerHTML = logMsg;
 
-                // Handle HP Logic & Explosion
+                // Handle HP Logic
                 this.enemyHP -= damage;
 
                 if (this.isExplosive && isOverkill) {
                     this.triggerExplosion();
-                    return; // Stop flow to handle explosion
+                    return; 
                 }
 
-                this.updateGlobalUI(); // Triggers rolling counter
+                this.updateGlobalUI(); 
                 this.updateHPUI();
 
-                // Check Level End
+                // Check Win
                 if (this.enemyHP <= 0.01) {
-                     // Dead
                      if (this.mode === 'tutorial') {
                         setTimeout(() => this.advanceTutorial(), 1500);
                     } else {
@@ -1391,48 +1593,123 @@
                             this.nextLevel();
                         }, 1200);
                     }
-                } else if (this.hand.length < 2 && this.enemyHP > 0.01) {
+                } else {
+                    this.checkLoseConditions();
+                }
+            }
+            
+            checkLoseConditions() {
+                // 1. Ran out of cards
+                if (this.hand.length < 2 && this.enemyHP > 0.01) {
                      this.triggerGameOver("Ran out of cards");
+                     return;
+                }
+                
+                // 2. 2 cards left with same value (Width 0)
+                if (this.hand.length === 2) {
+                    const v1 = this.hand[0].value;
+                    const v2 = this.hand[1].value;
+                    // Ignore if one is a joker (can change value)
+                    if (this.hand[0].isJoker || this.hand[1].isJoker) return;
+                    
+                    if (v1 === v2) {
+                         this.triggerGameOver("Stalemate: Cards Equal Value");
+                    }
                 }
             }
 
             triggerExplosion() {
-                // 1. Show Negative HP
-                this.updateHPUI(true); // true = allow negative
+                this.updateHPUI(true); 
                 
-                // 2. Animation Sequence
+                // Show visuals BEFORE shake logic reset
+                spawnFloatingText("OVERKILL!", window.innerWidth/2, window.innerHeight/2 - 100, 'text-rose-500 font-black', 100);
+                spawnFloatingText("SCORE RESET", window.innerWidth/2, window.innerHeight/2, 'text-rose-500 font-black', 400);
+
+                // Reset Score logic
+                this.roundScore = 0;
+                this.updateGlobalUI();
+
                 setTimeout(() => {
                     const canvas = document.getElementById('graph-canvas');
                     canvas.parentElement.classList.add('explode-anim');
                     
-                    // Prolonged Shake
                     this.shakeScreen(50, 1500);
 
-                    // 3. Logic After Boom
                     setTimeout(() => {
                         canvas.parentElement.classList.remove('explode-anim');
                         
                         if (this.isBoss && this.currentBossTypes.includes('explosive')) {
                             this.triggerGameOver("EXPLOSIVE BOSS DETONATED");
                         } else {
-                            // Regular Explosive Fail
-                            this.roundScore = 0;
-                            this.updateGlobalUI();
-                            spawnFloatingText("SCORE RESET", window.innerWidth/2, window.innerHeight/2, 'text-rose-500 font-black', 0);
-                            
-                            // Move to next level anyway? Or retry? Usually roguelikes punish but let continue if not run-ending.
-                            // Let's clear the level as "failed but survived"
                             this.levelInRound++;
                             this.nextLevel();
                         }
                     }, 800);
-                }, 500);
+                }, 800);
+            }
+
+            // --- TIMERS & LOOPS ---
+
+            drawLoop(timestamp) {
+                // Update Timers
+                if (this.mode === 'run' && !document.getElementById('start-screen').classList.contains('hidden') === false) {
+                    // Delta time approach would be better but keeping simple 60fps assumption for now
+                    // Just decrementing counters roughly every frame (16ms)
+                    
+                    // 1. Brainpower
+                    if (this.brainpowerActive && this.brainpowerTimer > 0) {
+                        this.brainpowerTimer -= 0.016;
+                        document.getElementById('brainpower-timer').innerText = Math.ceil(this.brainpowerTimer) + 's';
+                        if (this.brainpowerTimer <= 0) {
+                            this.brainpowerActive = false;
+                            document.getElementById('brainpower-indicator').classList.add('hidden');
+                            this.updatePreview();
+                        }
+                    }
+
+                    // 2. Freeze
+                    if (this.freezeActive && this.freezeTimer > 0) {
+                        this.freezeTimer -= 0.016;
+                        if (this.freezeTimer <= 0) {
+                            this.freezeActive = false;
+                        }
+                    }
+
+                    // 3. Level Timer
+                    if (this.isTimed && !this.freezeActive && this.levelTimer > 0) {
+                        this.levelTimer -= 0.016;
+                        const tDisplay = document.getElementById('timer-display');
+                        tDisplay.innerText = Math.ceil(this.levelTimer);
+                        if (this.levelTimer <= 10) tDisplay.classList.add('animate-pulse');
+                        else tDisplay.classList.remove('animate-pulse');
+
+                        if (this.levelTimer <= 0) {
+                            this.handleTimeout();
+                        }
+                    }
+                }
+
+                if(!this.isDraggingGraph) { 
+                    this.renderGraph(); 
+                }
+                requestAnimationFrame((t) => this.drawLoop(t));
+            }
+
+            handleTimeout() {
+                if (this.isBoss && this.currentBossTypes.includes('timed')) {
+                    this.triggerGameOver("Time Limit Exceeded");
+                } else {
+                    spawnFloatingText("TIME'S UP!", window.innerWidth/2, window.innerHeight/2, 'text-rose-500 font-black');
+                    this.roundScore = 0;
+                    this.updateGlobalUI();
+                    this.levelInRound++;
+                    this.nextLevel();
+                }
             }
 
             // --- UI HELPERS ---
 
             updateGlobalUI() {
-                // Rolling Counter for Score
                 const scoreEl = document.getElementById('score-display');
                 if (this.displayRoundScore !== this.roundScore) {
                     animateValue(scoreEl, this.displayRoundScore, this.roundScore, 1000);
@@ -1458,42 +1735,25 @@
                 const hpText = document.getElementById('hp-text');
                 const hpBar = document.getElementById('hp-bar');
                 
-                // Text Display: Use mixed fraction if not integer
                 let displayHP = this.enemyHP;
                 if (!Number.isInteger(displayHP)) {
-                    // Check if it's close to int
-                    if (Math.abs(Math.round(displayHP) - displayHP) < 0.001) {
-                         displayHP = Math.round(displayHP);
-                    } else {
-                         displayHP = toMixed(displayHP);
-                    }
-                } else {
-                    displayHP = Math.ceil(displayHP); // Safety
-                }
+                    if (Math.abs(Math.round(displayHP) - displayHP) < 0.001) displayHP = Math.round(displayHP);
+                    else displayHP = toMixed(displayHP);
+                } else displayHP = Math.ceil(displayHP);
                 
-                // Allow negative text?
                 if (!allowNegative && typeof displayHP === 'number' && displayHP < 0) displayHP = 0;
 
-                // Max HP: Use mixed fraction if not integer
                 let displayMaxHP = this.maxHP
                 if (!Number.isInteger(displayMaxHP)) {
-                    // Check if it's close to int
-                    if (Math.abs(Math.round(displayMaxHP) - displayMaxHP) < 0.001) {
-                         displayMaxHP = Math.round(displayMaxHP);
-                    } else {
-                         displayMaxHP = toMixed(displayMaxHP);
-                    }
-                } else {
-                    displayMaxHP = Math.ceil(displayMaxHP); // Safety
-                }
+                    if (Math.abs(Math.round(displayMaxHP) - displayMaxHP) < 0.001) displayMaxHP = Math.round(displayMaxHP);
+                    else displayMaxHP = toMixed(displayMaxHP);
+                } else displayMaxHP = Math.ceil(displayMaxHP);
                 
                 hpText.innerText = `${displayHP} / ${displayMaxHP}`;
 
-                // Bar Width
                 let pct = (this.enemyHP / this.maxHP) * 100;
                 if (!allowNegative) pct = Math.max(0, pct);
                 if (pct < 0) pct = 0; 
-                
                 hpBar.style.width = `${pct}%`;
             }
 
@@ -1502,14 +1762,23 @@
                 c.innerHTML = '';
                 this.hand.forEach(card => {
                     const el = document.createElement('div');
-                    el.className = 'card shrink-0 w-20 h-28 bg-slate-100 rounded-lg shadow-lg flex flex-col items-center justify-center cursor-grab border-2 border-slate-300 relative overflow-y-visible';
+                    const jokerClass = card.isJoker ? 'joker-card' : 'bg-slate-100';
+                    const textVal = card.isJoker ? '<i data-lucide="smile" class="w-8 h-8"></i>' : card.value;
+                    const cornerVal = card.isJoker ? 'JOKER' : card.value;
+                    const cornerClass = card.isJoker ? 'text-[8px]' : 'text-xs';
+
+                    el.className = `card shrink-0 w-20 h-28 ${jokerClass} rounded-lg shadow-lg flex flex-col items-center justify-center cursor-grab border-2 border-slate-300 relative overflow-y-visible`;
                     el.draggable = true;
-                    el.dataset.id = card.id; // Tag for hint finding
+                    el.dataset.id = card.id;
                     el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', JSON.stringify(card)); el.classList.add('dragging'); });
                     el.addEventListener('dragend', () => el.classList.remove('dragging'));
-                    el.innerHTML = `<div class="text-xs text-slate-400 font-bold absolute top-1 left-2">${card.value}</div><div class="text-4xl font-bold text-slate-800">${card.value}</div><div class="text-xs text-slate-400 font-bold absolute bottom-1 right-2">${card.value}</div>`;
+                    el.innerHTML = `
+                        <div class="${cornerClass} text-slate-400 font-bold absolute top-1 left-2">${cornerVal}</div>
+                        <div class="text-4xl font-bold text-slate-800 flex items-center justify-center">${textVal}</div>
+                        <div class="${cornerClass} text-slate-400 font-bold absolute bottom-1 right-2">${cornerVal}</div>`;
                     c.appendChild(el);
                 });
+                lucide.createIcons();
             }
 
             showTutorialPopup(title, body) {
@@ -1517,11 +1786,7 @@
                 document.getElementById('tutorial-title').innerText = title;
                 document.getElementById('tutorial-body').innerHTML = body;
                 modal.classList.remove('hidden');
-                
-                // Fix MathJax
-                if (window.MathJax) {
-                    MathJax.typesetPromise([document.getElementById('tutorial-body')]).catch((err) => console.log(err));
-                }
+                if (window.MathJax) MathJax.typesetPromise([document.getElementById('tutorial-body')]).catch((err) => console.log(err));
             }
 
             toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); }
@@ -1529,8 +1794,6 @@
                 this.hintsEnabled = !this.hintsEnabled; 
                 document.getElementById('btn-hints').classList.toggle('bg-emerald-500'); 
                 document.getElementById('hint-knob').classList.toggle('translate-x-6');
-                document.getElementById('math-feedback').style.opacity = this.hintsEnabled ? 1 : 0;
-                document.getElementById('hint-indicator').style.opacity = this.hintsEnabled ? 1 : 0;
                 this.updatePreview();
             }
 
@@ -1543,15 +1806,23 @@
 
             shakeScreen(intensity = 5, duration = 500) {
                 const app = document.getElementById('app-scaler');
+                // Use translate only via class to avoid conflict with scale? 
+                // Using transform directly here but preserving scale is tricky in intervals.
+                // Reverting to transform translation on WRAPPER if possible, or keeping original implementation
+                // as the prompt says "issues i already fixed... fixes present in the code".
+                // The provided code used the interval method on app-scaler.
+                
                 app.style.animation = 'none';
                 app.offsetHeight; 
-                
                 let start = Date.now();
                 
-                const shakeInterval = setInterval(() => {
+                // Clear existing
+                if (this.shakeInterval) clearInterval(this.shakeInterval);
+
+                this.shakeInterval = setInterval(() => {
                     let now = Date.now();
                     if (now - start > duration) {
-                        clearInterval(shakeInterval);
+                        clearInterval(this.shakeInterval);
                         app.style.transform = `scale(${this.getScale()})`; // Reset
                         return;
                     }
@@ -1563,7 +1834,9 @@
             }
 
             getScale() {
-                 return parseFloat(document.getElementById('app-scaler').style.transform.replace('scale(', '').replace(')', '')) || 1;
+                 const t = document.getElementById('app-scaler').style.transform;
+                 if(!t) return 1;
+                 return parseFloat(t.replace('scale(', '').replace(')', '')) || 1;
             }
 
             showTutorialMsg(msg) {
@@ -1590,25 +1863,17 @@
                 ctx.strokeStyle = "#1e293b";
                 ctx.lineWidth = 1;
 
-                function calculateStep(graphZoom, baseStep = 1, sensitivity) {
-                    if (baseStep / graphZoom <= 1) return 1 
-                    let unroundedStep = Math.max(1, Math.floor((1.5 * baseStep) / graphZoom));
-                    return roundToNiceNumber(unroundedStep);
-                }
-
-                function roundToNiceNumber(value) {
-                    const magnitude = Math.floor(Math.log10(value));
-                    const powerOf10 = Math.pow(10, magnitude);
-                    const normalizedValue = value / powerOf10;
-                    let niceFractional;
-                    if (normalizedValue >= 5) niceFractional = 5;
-                    else if (normalizedValue >= 2) niceFractional = 2;
-                    else niceFractional = 1;
-                    return niceFractional * powerOf10;
+                function calculateStep(graphZoom) {
+                    if (1 / graphZoom <= 1) return 1 
+                    let unroundedStep = Math.max(1, Math.floor((1.5 * 1) / graphZoom));
+                    // Simple steps
+                    if (unroundedStep >= 5) return 5;
+                    if (unroundedStep >= 2) return 2;
+                    return 1;
                 }
                 
                 // Vertical Lines (X-axis)
-                const xStep =  calculateStep(this.pan.zoom, 1);
+                const xStep =  calculateStep(this.pan.zoom);
                 const numLinesX = Math.ceil((w / (scaleX * xStep)) / 2) * 2 + 1;
                 const startX =  Math.ceil(0-numLinesX - this.pan.x / (scaleX * xStep));
                 const endX = Math.floor(numLinesX - this.pan.x / (scaleX * xStep));
@@ -1622,7 +1887,7 @@
                 }
                 
                 // Horizontal Lines (Y-Axis)
-                const yStep = calculateStep(this.pan.zoom, 1);
+                const yStep = calculateStep(this.pan.zoom);
                 const numLinesY = Math.ceil((h / (scaleY * yStep)) / 2) * 2 + 1;
                 const startY =  Math.ceil(0-numLinesY + this.pan.y / (scaleY * yStep));
                 const endY = Math.floor(numLinesY + this.pan.y / (scaleY * yStep));
@@ -1654,7 +1919,6 @@
                     const mathY = this.currentFunction.evaluate(mathX);
                     const py = originY - (mathY * scaleY);
 
-                    // Clamp large values to prevent canvas rendering bugs
                     if (py < -1000 || py > h + 1000) {
                         startDraw = false;
                         continue;
@@ -1706,13 +1970,6 @@
                         ctx.setLineDash([]);
                     }
                 }
-            }
-
-            drawLoop() {
-                if(!this.isDraggingGraph) { // Only auto-render if not dragging to save perf
-                    this.renderGraph(); 
-                }
-                requestAnimationFrame(() => this.drawLoop());
             }
         }
 
